@@ -32,3 +32,15 @@ logging:
   level:
     com.SIH.IndianBankSimulation: INFO
     org.springframework.security: INFO
+
+bank:
+  security:
+    internal-service-token: ${BANK_INTERNAL_SERVICE_TOKEN:sim-secret-token-360}
+  zerofraud360:
+    events-url: ${ZERO_FRAUD_EVENTS_URL:http://localhost:8081/internal/v1/events/payment-success}
+  holds:
+    scheduler:
+      enabled: true
+    expiration-check-interval-ms: 15000
+  outbox:
+    publisher-interval-ms: 5000

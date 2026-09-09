@@ -8,9 +8,12 @@ import com.SIH.IndianBankSimulation.common.exception.ResourceNotFoundException;
 import com.SIH.IndianBankSimulation.common.exception.UnauthorizedAccountAccessException;
 import com.SIH.IndianBankSimulation.customer.domain.Customer;
 import com.SIH.IndianBankSimulation.customer.repository.CustomerRepository;
+import com.SIH.IndianBankSimulation.hold.domain.HoldStatus;
+import com.SIH.IndianBankSimulation.hold.repository.AccountHoldRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -18,10 +21,14 @@ public class AccountService {
 
     private final BankAccountRepository accountRepository;
     private final CustomerRepository customerRepository;
+    private final AccountHoldRepository holdRepository;
 
-    public AccountService(BankAccountRepository accountRepository, CustomerRepository customerRepository) {
+    public AccountService(BankAccountRepository accountRepository,
+                          CustomerRepository customerRepository,
+                          AccountHoldRepository holdRepository) {
         this.accountRepository = accountRepository;
         this.customerRepository = customerRepository;
+        this.holdRepository = holdRepository;
     }
 
     @Transactional(readOnly = true)
@@ -49,7 +56,7 @@ public class AccountService {
                 primary.getAccountNumber(),
                 primary.getUpiId(),
                 primary.getCurrency(),
-                primary.getAvailableBalance()
+                computeAvailableBalance(primary)
         );
     }
 
@@ -69,6 +76,12 @@ public class AccountService {
         return toDto(account);
     }
 
+    public BigDecimal computeAvailableBalance(BankAccount account) {
+        BigDecimal activeHolds = holdRepository.sumActiveHoldAmount(account.getAccountNumber(), HoldStatus.ACTIVE);
+        BigDecimal available = account.getAvailableBalance().subtract(activeHolds != null ? activeHolds : BigDecimal.ZERO);
+        return available.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : available;
+    }
+
     public AccountResponseDto toDto(BankAccount account) {
         return new AccountResponseDto(
                 account.getId(),
@@ -79,7 +92,7 @@ public class AccountService {
                 account.getCustomer().getFullName(),
                 account.getCurrency(),
                 account.getStatus().name(),
-                account.getAvailableBalance(),
+                computeAvailableBalance(account),
                 account.getUpiId()
         );
     }
