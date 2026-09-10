@@ -237,24 +237,22 @@ def load_or_generate_data(csv_path: Optional[str | Path] = None) -> pd.DataFrame
         else:
             logger.warning("Specified path '%s' does not exist.", csv_path)
 
-    # If still not resolved, check standard locations
+    # If still not resolved, check standard local workspace locations
     if resolved_path is None:
-        user_folder_csv = Path(r"C:\Users\yoges\OneDrive\Desktop\mltraining datas\financial_fraud_dataset.csv")
-        local_csv = Path(__file__).resolve().parent / "financial_fraud_dataset.csv"
-        user_folder_docx_updated = Path(r"C:\Users\yoges\OneDrive\Desktop\mltraining datas\updated dataset-1.0.docx")
-        user_folder_docx_legacy = Path(r"C:\Users\yoges\OneDrive\Desktop\mltraining datas\dataset-1.docx")
-        user_folder_docx = user_folder_docx_updated if user_folder_docx_updated.is_file() else user_folder_docx_legacy
+        local_dir = Path(__file__).resolve().parent
+        local_csv = local_dir / "financial_fraud_dataset.csv"
+        local_docx_updated = local_dir / "updated dataset-1.0.docx"
+        local_docx_legacy = local_dir / "dataset-1.docx"
+        local_docx = local_docx_updated if local_docx_updated.is_file() else local_docx_legacy
 
-        if user_folder_csv.is_file():
-            resolved_path = user_folder_csv
-        elif local_csv.is_file():
+        if local_csv.is_file():
             resolved_path = local_csv
-        elif user_folder_docx.is_file():
+        elif local_docx.is_file():
             try:
                 from docx_extractor import extract_and_export_dataset
-                resolved_path = extract_and_export_dataset(docx_path=user_folder_docx)
+                resolved_path = extract_and_export_dataset(docx_path=local_docx)
             except Exception as exc:
-                logger.warning("Failed to extract data from user docx: %s", exc)
+                logger.warning("Failed to extract data from local docx: %s", exc)
 
     if resolved_path and resolved_path.is_file():
         logger.info("Loading transaction dataset from '%s'...", resolved_path.resolve())

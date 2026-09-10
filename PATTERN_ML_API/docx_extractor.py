@@ -26,14 +26,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger("docx_extractor")
 
-UPDATED_DOCX_PATH = Path(r"C:\Users\yoges\OneDrive\Desktop\mltraining datas\updated dataset-1.0.docx")
-LEGACY_DOCX_PATH = Path(r"C:\Users\yoges\OneDrive\Desktop\mltraining datas\dataset-1.docx")
-DEFAULT_OUTPUT_CSV = Path(r"C:\Users\yoges\OneDrive\Desktop\mltraining datas\financial_fraud_dataset.csv")
-LOCAL_OUTPUT_CSV = Path(__file__).resolve().parent / "financial_fraud_dataset.csv"
+LOCAL_DIR = Path(__file__).resolve().parent
+UPDATED_DOCX_PATH = LOCAL_DIR / "updated dataset-1.0.docx"
+LEGACY_DOCX_PATH = LOCAL_DIR / "dataset-1.docx"
+LOCAL_OUTPUT_CSV = LOCAL_DIR / "financial_fraud_dataset.csv"
+DEFAULT_OUTPUT_CSV = LOCAL_OUTPUT_CSV
 
 
 def resolve_docx_path(preferred_path: Path | None = None) -> Path:
-    """Finds the most up-to-date docx file available."""
+    """Finds the most up-to-date docx file available in the local directory."""
     if preferred_path and preferred_path.is_file():
         return preferred_path
     if UPDATED_DOCX_PATH.is_file():
@@ -41,7 +42,7 @@ def resolve_docx_path(preferred_path: Path | None = None) -> Path:
     if LEGACY_DOCX_PATH.is_file():
         return LEGACY_DOCX_PATH
     raise FileNotFoundError(
-        f"Neither '{UPDATED_DOCX_PATH}' nor '{LEGACY_DOCX_PATH}' was found."
+        f"Neither '{UPDATED_DOCX_PATH.name}' nor '{LEGACY_DOCX_PATH.name}' was found in {LOCAL_DIR}."
     )
 
 
@@ -304,30 +305,20 @@ def generate_pattern_grounded_dataset(
 
 def extract_and_export_dataset(
     docx_path: Path | None = None,
-    output_path: Path = DEFAULT_OUTPUT_CSV,
-    local_path: Path = LOCAL_OUTPUT_CSV,
+    output_path: Path = LOCAL_OUTPUT_CSV,
     n_samples: int = 50_000,
 ) -> Path:
-    """Executes full extraction from docx and saves updated dataset as CSV."""
+    """Executes full extraction from docx and saves updated dataset as CSV in workspace."""
     resolved_docx = resolve_docx_path(docx_path)
     logger.info("Using document source: %s", resolved_docx)
 
     df = generate_pattern_grounded_dataset(docx_path=resolved_docx, n_samples=n_samples)
 
-    # Save to user specified data folder
-    try:
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        df.to_csv(output_path, index=False)
-        logger.info("Saved updated dataset to user directory: %s", output_path)
-    except Exception as e:
-        logger.warning("Could not write directly to %s: %s", output_path, e)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.to_csv(output_path, index=False)
+    logger.info("Saved dataset to workspace: %s", output_path)
 
-    # Save local copy in workspace
-    local_path.parent.mkdir(parents=True, exist_ok=True)
-    df.to_csv(local_path, index=False)
-    logger.info("Saved local copy to workspace: %s", local_path)
-
-    return output_path if output_path.exists() else local_path
+    return output_path
 
 
 if __name__ == "__main__":
