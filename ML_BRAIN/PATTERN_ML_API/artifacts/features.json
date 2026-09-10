@@ -1,0 +1,38 @@
+{
+  "features": [
+    "amount",
+    "velocity_10m",
+    "velocity_24h",
+    "distance_from_last_km",
+    "is_new_device"
+  ],
+  "target": "is_fraud",
+  "total_features": 5,
+  "model_architecture": "LightGBM Booster",
+  "scale_pos_weight": 28.3824,
+  "best_iteration": 389,
+  "metrics": {
+    "pr_auc": 1.0,
+    "roc_auc": 1.0,
+    "precision_at_0.50": 1.0,
+    "recall_at_0.50": 1.0,
+    "recall_at_mfa_threshold_0.30": 1.0,
+    "precision_at_block_threshold_0.70": 1.0
+  },
+  "feature_importance_gain": {
+    "amount": 1618.2935,
+    "velocity_10m": 765946.1899,
+    "velocity_24h": 125441.1065,
+    "distance_from_last_km": 6753.6049,
+    "is_new_device": 84.8178
+  },
+  "decision_thresholds": {
+    "allow_below": 0.3,
+    "mfa_between": [
+      0.3,
+      0.7
+    ],
+    "block_above": 0.7
+  },
+  "trained_at_utc": "2026-09-09T15:24:28.477482+00:00"
+}
