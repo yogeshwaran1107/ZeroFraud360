@@ -10,6 +10,10 @@
 
 ---
 
+> 📖 **API Endpoints Reference**: See [`API_ENDPOINTS.md`](./API_ENDPOINTS.md) for full request/response schemas, authentication headers, error envelopes, and curl examples.
+
+---
+
 ## 1. System Overview & Architecture
 
 The application simulates an inter-bank payment network where two simulated banks (**Bank A** and **Bank B**) interact through an educational payment switch. Two frontend users (Alice and Bob) have accounts in separate banks and can transfer funds in real-time.

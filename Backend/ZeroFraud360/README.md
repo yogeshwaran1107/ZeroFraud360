@@ -4,6 +4,10 @@
 
 ---
 
+> 📖 **API Endpoints Reference**: See [`API_ENDPOINTS.md`](./API_ENDPOINTS.md) for full request/response schemas, officer authentication, error envelopes, and curl examples.
+
+---
+
 ## 1. System Architecture
 
 ```text
