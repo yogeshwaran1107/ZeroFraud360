@@ -1,12 +1,45 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { loginUser, SAMPLE_ACCOUNTS } from '../services/api';
 import './WelcomeScreen.css';
 
-export default function WelcomeScreen({ onNavigate }) {
+export default function WelcomeScreen({ onNavigate, onLoginSuccess }) {
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [identifier, setIdentifier] = useState('10001');
+  const [password, setPassword] = useState('Password@123');
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const handleLogin = async (idToUse = identifier, pwdToUse = password) => {
+    setLoading(true);
+    setErrorMessage('');
+    try {
+      const res = await loginUser(idToUse, pwdToUse);
+      if (res.success) {
+        if (onLoginSuccess) {
+          onLoginSuccess(res.account);
+        }
+        if (onNavigate) {
+          onNavigate('dashboard');
+        }
+      } else {
+        setErrorMessage(res.message || 'Login failed. Please check credentials.');
+      }
+    } catch (err) {
+      setErrorMessage('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleQuickSelect = (acc) => {
+    setIdentifier(acc.accountNumber);
+    setPassword('Password@123');
+    handleLogin(acc.accountNumber, 'Password@123');
+  };
+
   return (
     <div className="mobile-wrapper welcome-wrapper">
       <div className="welcome-screen">
-
-
         {/* Header Branding */}
         <div className="branding-section">
           <div className="bank-logo-icon">
@@ -20,10 +53,10 @@ export default function WelcomeScreen({ onNavigate }) {
             </svg>
           </div>
           <h1 className="app-title">IndianBankSim</h1>
-          <p className="app-subtitle">Experience India's Digital Payments Ecosystem</p>
+          <p className="app-subtitle">Multi-Account Real-Time Banking &amp; Fraud Detection</p>
         </div>
 
-        {/* Center India Map + Rupee Watermark Illustration */}
+        {/* Center Illustration */}
         <div className="map-illustration-container">
           <div className="india-map-watermark">
             <svg viewBox="0 0 300 300" className="india-svg">
@@ -57,44 +90,95 @@ export default function WelcomeScreen({ onNavigate }) {
           </div>
         </div>
 
-        {/* Features Checklist */}
-        <div className="features-list">
-          <div className="feature-item">
-            <div className="feature-icon-badge">
-              <i className="fa-solid fa-hand-holding-dollar"></i>
-            </div>
-            <span>Send &amp; Receive Money</span>
+        {/* Quick Select Accounts Panel */}
+        <div className="quick-accounts-section">
+          <div className="quick-accounts-header">
+            <span>Select Account (5-Digit ID):</span>
           </div>
-
-          <div className="feature-item">
-            <div className="feature-icon-badge">
-              <i className="fa-solid fa-shield-halved"></i>
-            </div>
-            <span>Secure &amp; Real-time</span>
-          </div>
-
-          <div className="feature-item">
-            <div className="feature-icon-badge">
-              <i className="fa-solid fa-building-columns"></i>
-            </div>
-            <span>Simulated Indian Banking Network</span>
+          <div className="quick-accounts-grid">
+            {SAMPLE_ACCOUNTS.map(acc => (
+              <button
+                key={acc.accountNumber}
+                type="button"
+                className={`quick-acc-btn ${identifier === acc.accountNumber ? 'active' : ''}`}
+                onClick={() => handleQuickSelect(acc)}
+                title={`Login as ${acc.customerName} (${acc.accountNumber})`}
+              >
+                <div className="acc-tag-id">{acc.accountNumber}</div>
+                <div className="acc-tag-name">{acc.customerName}</div>
+                <div className="acc-tag-bal">₹{acc.availableBalance.toLocaleString('en-IN')}</div>
+              </button>
+            ))}
           </div>
         </div>
 
         {/* Action Buttons */}
         <div className="action-buttons">
-          <button className="btn-welcome-login" onClick={() => onNavigate && onNavigate('dashboard')}>
-            Login
-          </button>
-          <button className="btn-welcome-register" onClick={() => onNavigate && onNavigate('dashboard')}>
-            Create Account
+          <button className="btn-welcome-login" onClick={() => setShowLoginModal(true)}>
+            <i className="fa-solid fa-right-to-bracket" style={{ marginRight: 8 }}></i>
+            Login with Account ID
           </button>
         </div>
 
         {/* Footer Note */}
         <div className="welcome-footer">
-          A learning project simulating Indian payment systems (UPI, IMPS, NEFT, RTGS)
+          Each account has individual wallet balance &amp; transaction history backed by the database.
         </div>
+
+        {/* Login Modal */}
+        {showLoginModal && (
+          <div className="login-modal-overlay">
+            <div className="login-modal-card">
+              <div className="login-modal-header">
+                <h3>Account Login</h3>
+                <button className="modal-close-btn" onClick={() => setShowLoginModal(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              {errorMessage && (
+                <div className="login-error-banner">
+                  <i className="fa-solid fa-triangle-exclamation"></i>
+                  <span>{errorMessage}</span>
+                </div>
+              )}
+
+              <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }}>
+                <div className="form-group">
+                  <label>5-Digit Account ID or Username</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    placeholder="e.g. 10001, 10002, muthu"
+                    required
+                  />
+                  <span className="input-hint">Sample Account IDs: 10001, 10002, 10003, 10004, 10005, 10006</span>
+                </div>
+
+                <div className="form-group">
+                  <label>Password</label>
+                  <input
+                    type="password"
+                    className="modal-input"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Password@123"
+                    required
+                  />
+                  <span className="input-hint">Default password: Password@123</span>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="submit" className="btn-modal-submit" disabled={loading}>
+                    {loading ? 'Authenticating...' : 'Sign In'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

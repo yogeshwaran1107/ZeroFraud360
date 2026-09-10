@@ -8,5 +8,6 @@ public enum AlertStatus {
     HOLD_REQUESTED,
     HOLD_ACTIVE,
     RESOLVED,
+    CONFIRMED_FRAUD,
     ERROR
 }

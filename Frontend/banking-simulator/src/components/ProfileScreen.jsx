@@ -1,49 +1,76 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getAccountDetails, removeAuthToken } from '../services/api';
 import './ProfileScreen.css';
 
 export default function ProfileScreen({ onNavigate }) {
   const [showBalance, setShowBalance] = useState(true);
+  const [account, setAccount] = useState(null);
+
+  useEffect(() => {
+    async function load() {
+      const res = await getAccountDetails();
+      if (res.success && res.account) {
+        setAccount(res.account);
+      }
+    }
+    load();
+  }, []);
+
+  const customerName = account?.customerName || 'Account Holder';
+  const accNo = account?.accountNumber || '10001';
+  const email = account?.email || `${customerName.toLowerCase().replace(/[^a-z]/g, '')}@zerofraud.bank`;
+  const balanceVal = account?.availableBalance !== undefined ? account.availableBalance : 0.00;
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const handleLogout = () => {
+    removeAuthToken();
+    if (onNavigate) onNavigate('welcome');
+  };
 
   const menuItems = [
-    { id: 1, title: 'Account Details', icon: 'fa-regular fa-id-card' },
+    { id: 1, title: 'Manage Beneficiaries', icon: 'fa-solid fa-user-plus', action: () => onNavigate && onNavigate('dashboard') },
     { id: 2, title: 'Manage UPI PIN', icon: 'fa-solid fa-calculator', action: () => onNavigate && onNavigate('auth') },
-    { id: 3, title: 'Beneficiaries', icon: 'fa-solid fa-user-plus' },
-    { id: 4, title: 'Security Settings', icon: 'fa-solid fa-lock', action: () => onNavigate && onNavigate('simulator') },
-    { id: 5, title: 'Notifications', icon: 'fa-regular fa-bell' },
-    { id: 6, title: 'About', icon: 'fa-solid fa-circle-info' },
+    { id: 3, title: 'Transaction History', icon: 'fa-regular fa-clock', action: () => onNavigate && onNavigate('history') },
+    { id: 4, title: 'Bank: ' + (account?.bankName || 'Bank of Simulation A'), icon: 'fa-solid fa-building-columns' },
+    { id: 5, title: 'Sign Out / Switch User', icon: 'fa-solid fa-right-from-bracket', action: handleLogout, isDanger: true }
   ];
 
   return (
     <div className="mobile-wrapper">
       <div className="profile-screen">
-
-
         <div className="profile-page-header">
           <div style={{ width: 24 }}></div>
           <h2 className="page-title">Profile</h2>
-          <button className="settings-btn">
-            <i className="fa-solid fa-gear"></i>
+          <button className="settings-btn" onClick={handleLogout} title="Sign Out">
+            <i className="fa-solid fa-right-from-bracket" style={{ color: '#ef4444' }}></i>
           </button>
         </div>
 
         <div className="profile-content">
           <div className="profile-user-card">
-            <div className="profile-avatar">UA</div>
+            <div className="profile-avatar">{getInitials(customerName)}</div>
             <div className="profile-user-details">
-              <h3 className="profile-user-name">User A</h3>
-              <span className="profile-user-email">usera@bank.com</span>
+              <h3 className="profile-user-name">{customerName}</h3>
+              <span className="profile-user-email">{email}</span>
             </div>
           </div>
 
           <div className="profile-account-card">
             <div className="profile-acc-top">
               <div>
-                <div className="profile-acc-type">Savings Account</div>
-                <div className="profile-acc-num">XXXX 1234</div>
+                <div className="profile-acc-type">Savings Account ({account?.bankCode || 'BANK_A'})</div>
+                <div className="profile-acc-num">ACC ID: {accNo}</div>
               </div>
               <button 
                 className="profile-eye-btn" 
                 onClick={() => setShowBalance(!showBalance)}
+                title={showBalance ? "Hide Balance" : "Show Balance"}
               >
                 <i className={`fa-regular ${showBalance ? 'fa-eye' : 'fa-eye-slash'}`}></i>
               </button>
@@ -52,7 +79,9 @@ export default function ProfileScreen({ onNavigate }) {
             <div className="profile-acc-bottom">
               <div className="profile-bal-label">Available Balance</div>
               <div className="profile-bal-amount">
-                {showBalance ? '₹ 50,000.00' : '₹ ••••••••'}
+                {showBalance 
+                  ? `₹ ${Number(balanceVal).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` 
+                  : '₹ ••••••••'}
               </div>
             </div>
           </div>
@@ -62,9 +91,10 @@ export default function ProfileScreen({ onNavigate }) {
               <div 
                 key={item.id} 
                 className="profile-menu-item"
-                onClick={item.action || (() => alert(`Opened ${item.title}`))}
+                onClick={item.action || (() => alert(`${item.title}`))}
+                style={item.isDanger ? { color: '#ef4444' } : {}}
               >
-                <div className="menu-icon-wrap">
+                <div className="menu-icon-wrap" style={item.isDanger ? { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' } : {}}>
                   <i className={item.icon}></i>
                 </div>
                 <span className="menu-item-title">{item.title}</span>

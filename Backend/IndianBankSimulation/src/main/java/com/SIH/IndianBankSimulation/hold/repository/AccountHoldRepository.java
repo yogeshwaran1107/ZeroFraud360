@@ -21,6 +21,6 @@ public interface AccountHoldRepository extends JpaRepository<AccountHold, Long> 
 
     List<AccountHold> findAllByStatusAndExpiresAtLessThanEqual(HoldStatus status, Instant now);
 
-    @Query("SELECT COALESCE(SUM(h.amount), 0) FROM AccountHold h WHERE h.accountId = :accountId AND h.status = :status")
+    @Query("SELECT COALESCE(SUM(h.amount), 0) FROM AccountHold h WHERE h.accountId = :accountId AND (h.status = :status OR h.status = com.SIH.IndianBankSimulation.hold.domain.HoldStatus.BLOCKED)")
     BigDecimal sumActiveHoldAmount(@Param("accountId") String accountId, @Param("status") HoldStatus status);
 }

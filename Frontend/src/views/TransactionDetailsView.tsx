@@ -8,6 +8,8 @@ import {
   ArrowRight,
   CheckCircle2,
   Unlock,
+  Ban,
+  Bell,
   X,
 } from 'lucide-react';
 
@@ -26,8 +28,10 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
   const { user } = useAuth();
   const [isReleaseModalOpen, setIsReleaseModalOpen] = useState(false);
   const [releaseReason, setReleaseReason] = useState('');
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [confirmReason, setConfirmReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const maskAccount = (acc?: string) => {
     if (!acc) return 'XXXX0000';
@@ -53,16 +57,17 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
   const time1 = new Date(alert.createdAt).toLocaleTimeString('en-IN');
   const isHoldActive = alert.status === 'HOLD_ACTIVE';
   const isResolved = alert.status === 'RESOLVED';
+  const isConfirmedFraud = alert.status === 'CONFIRMED_FRAUD';
 
   const handleReleaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!releaseReason.trim()) {
-      setReleaseError('Please enter a clearance reason.');
+      setActionError('Please enter a clearance reason.');
       return;
     }
 
     setIsSubmitting(true);
-    setReleaseError(null);
+    setActionError(null);
 
     try {
       const holdTarget = alert.holdRequestId || alert.alertId;
@@ -70,7 +75,29 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
       setIsReleaseModalOpen(false);
       onHoldReleased();
     } catch (err: any) {
-      setReleaseError(err.message || 'Failed to release hold.');
+      setActionError(err.message || 'Failed to release hold.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmFraudSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!confirmReason.trim()) {
+      setActionError('Please enter a confirmation reason.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      const holdTarget = alert.holdRequestId || alert.alertId;
+      await api.officer.confirmFraud(holdTarget, confirmReason.trim(), user?.username);
+      setIsConfirmModalOpen(false);
+      onHoldReleased();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to confirm fraud.');
     } finally {
       setIsSubmitting(false);
     }
@@ -94,22 +121,45 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
           </p>
         </div>
 
-        {/* Release Hold Button for Officer */}
-        {isHoldActive && (
-          <button
-            onClick={() => setIsReleaseModalOpen(true)}
-            className="flex items-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-700 px-4 py-2 text-xs font-bold text-white shadow-md shadow-amber-600/30 transition-all cursor-pointer"
-          >
-            <Unlock className="h-4 w-4" />
-            <span>Release Account Hold</span>
-          </button>
-        )}
-        {isResolved && (
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700">
-            <CheckCircle2 className="h-4 w-4" />
-            Hold Released & Cleared
-          </span>
-        )}
+        {/* Action Buttons for Authorized Officers */}
+        <div className="flex items-center gap-2">
+          {isHoldActive && (
+            <>
+              <button
+                onClick={() => {
+                  setActionError(null);
+                  setIsConfirmModalOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-red-600 hover:bg-red-700 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-red-600/20 transition-all cursor-pointer"
+              >
+                <Ban className="h-4 w-4" />
+                <span>Confirm Fraud &amp; Store Pattern</span>
+              </button>
+              <button
+                onClick={() => {
+                  setActionError(null);
+                  setIsReleaseModalOpen(true);
+                }}
+                className="flex items-center gap-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 px-4 py-2.5 text-xs font-bold text-white shadow-md shadow-emerald-700/20 transition-all cursor-pointer"
+              >
+                <Unlock className="h-4 w-4" />
+                <span>Clear Alert (False Positive)</span>
+              </button>
+            </>
+          )}
+          {isConfirmedFraud && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-xs font-bold text-red-700">
+              <Ban className="h-4 w-4" />
+              Fraud Confirmed & Funds Blocked
+            </span>
+          )}
+          {isResolved && (
+            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              False Positive & Hold Released
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Red Suspicious Banner matching reference image */}
@@ -378,28 +428,142 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
         </div>
       </div>
 
+      {/* Broadcast Notifications Card */}
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-xs space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+            <Bell className="h-4 w-4 text-blue-600" />
+            <span>Urgent Broadcast Notifications</span>
+          </div>
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            Multi-Agency Dispatch Active
+          </span>
+        </div>
+        <p className="text-xs text-slate-500">
+          When this transaction pattern was detected, urgent real-time alerts were dispatched automatically to designated authorities and the victim account.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+          <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-blue-100 text-blue-700 font-bold text-xs">POLICE</div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">State Police Cyber/Fraud Cell</div>
+              <div className="text-[11px] text-slate-500">Dispatched via Secure Police Alert Feed</div>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-purple-100 text-purple-700 font-bold text-xs">CYBER</div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">National Cyber Crime Unit</div>
+              <div className="text-[11px] text-slate-500">Incident logged under Rapid Pass-Through rule</div>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-100 text-amber-700 font-bold text-xs">BANK</div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">Interbank Security Consortium</div>
+              <div className="text-[11px] text-slate-500">Accounts {alert.intermediateAccountId} &amp; {alert.destinationAccountId} restrictions notified</div>
+            </div>
+          </div>
+          <div className="p-3 rounded-xl border border-slate-100 bg-slate-50/50 flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-rose-100 text-rose-700 font-bold text-xs">VICTIM</div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">Victim Account ({alert.sourceAccountId})</div>
+              <div className="text-[11px] text-slate-500">Urgent SMS &amp; app alert: outgoing transactions muted</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Confirm Fraud Modal */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
+                <Ban className="h-4 w-4 text-red-600" />
+                <span>Confirm Fraud &amp; Store Pattern</span>
+              </div>
+              <button
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {actionError && (
+              <div className="p-2.5 rounded-xl bg-red-50 text-red-600 text-xs border border-red-200">
+                {actionError}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Confirming this transaction as actual fraud will <strong>permanently block</strong> the ₹{alert.secondAmount} in target account <span className="font-mono font-bold text-slate-900">{alert.destinationAccountId}</span> AND save this money mule pattern into the <strong>Fraud Patterns Registry</strong> for prevention.
+            </p>
+
+            <form onSubmit={handleConfirmFraudSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">
+                  Official Confirmation Finding / FIR Number *
+                </label>
+                <textarea
+                  value={confirmReason}
+                  onChange={(e) => setConfirmReason(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Confirmed unauthorized mule transfer. Cyber Cell case ref #9823."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-50 cursor-pointer shadow-md shadow-red-600/20"
+                >
+                  {isSubmitting ? 'Blocking & Storing...' : 'Confirm Fraud & Store Pattern'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Release Hold Modal */}
       {isReleaseModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
-                <Unlock className="h-4 w-4 text-amber-600" />
-                <span>Release Account Hold</span>
+                <Unlock className="h-4 w-4 text-emerald-600" />
+                <span>Clear Alert &amp; Unfreeze Account (False Positive)</span>
               </div>
               <button
                 onClick={() => setIsReleaseModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {releaseError && (
+            {actionError && (
               <div className="p-2.5 rounded-xl bg-red-50 text-red-600 text-xs border border-red-200">
-                {releaseError}
+                {actionError}
               </div>
             )}
+
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Clearing this alert will release the hold on account <span className="font-mono font-bold text-slate-900">{alert.destinationAccountId}</span>, restoring full fund access and marking the investigation resolved.
+            </p>
 
             <form onSubmit={handleReleaseSubmit} className="space-y-3 text-xs">
               <div>
@@ -408,19 +572,19 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                   type="text"
                   value={alert.destinationAccountId}
                   readOnly
-                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 font-mono text-slate-700"
+                  className="w-full rounded-xl bg-slate-50 border border-slate-200 px-3 py-2 font-mono text-slate-700 font-bold"
                 />
               </div>
 
               <div>
                 <label className="block text-slate-600 font-semibold mb-1">
-                  Investigation Clearance Reason *
+                  Investigation Clearance Rationale *
                 </label>
                 <textarea
                   value={releaseReason}
                   onChange={(e) => setReleaseReason(e.target.value)}
                   rows={3}
-                  placeholder="e.g. Legitimate transaction verified with customer."
+                  placeholder="e.g. Verified with customer as genuine vendor transfer; no mule indicators found."
                   className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-600"
                   required
                 />
@@ -430,16 +594,16 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsReleaseModalOpen(false)}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold disabled:opacity-50 cursor-pointer shadow-md shadow-emerald-700/20"
                 >
-                  {isSubmitting ? 'Releasing...' : 'Confirm Release'}
+                  {isSubmitting ? 'Clearing...' : 'Clear Alert & Unfreeze Funds'}
                 </button>
               </div>
             </form>

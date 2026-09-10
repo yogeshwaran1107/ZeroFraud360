@@ -1,0 +1,3 @@
+# Ensure LightGBM model files keep UNIX line endings for exact byte offsets
+*.txt text eol=lf
+*.model text eol=lf

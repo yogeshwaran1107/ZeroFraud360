@@ -6,6 +6,7 @@ import com.SIH.ZeroFraud360.event.dto.PaymentSuccessEvent;
 import com.SIH.ZeroFraud360.event.repository.ObservedTransactionRepository;
 import com.SIH.ZeroFraud360.event.repository.ProcessedEventRepository;
 import com.SIH.ZeroFraud360.fraud.rule.FraudFinding;
+import com.SIH.ZeroFraud360.fraud.rule.HighValueSpikeRule;
 import com.SIH.ZeroFraud360.fraud.rule.PaymentContext;
 import com.SIH.ZeroFraud360.fraud.rule.RapidPassThroughRule;
 import com.SIH.ZeroFraud360.fraud.service.FraudAlertService;
@@ -28,17 +29,20 @@ public class PaymentEventProcessorImpl implements PaymentEventProcessor {
     private final ObservedTransactionRepository transactionRepository;
     private final MoneyFlowTracker moneyFlowTracker;
     private final RapidPassThroughRule rapidPassThroughRule;
+    private final HighValueSpikeRule highValueSpikeRule;
     private final FraudAlertService fraudAlertService;
 
     public PaymentEventProcessorImpl(ProcessedEventRepository processedEventRepository,
                                      ObservedTransactionRepository transactionRepository,
                                      MoneyFlowTracker moneyFlowTracker,
                                      RapidPassThroughRule rapidPassThroughRule,
+                                     HighValueSpikeRule highValueSpikeRule,
                                      FraudAlertService fraudAlertService) {
         this.processedEventRepository = processedEventRepository;
         this.transactionRepository = transactionRepository;
         this.moneyFlowTracker = moneyFlowTracker;
         this.rapidPassThroughRule = rapidPassThroughRule;
+        this.highValueSpikeRule = highValueSpikeRule;
         this.fraudAlertService = fraudAlertService;
     }
 
@@ -90,9 +94,15 @@ public class PaymentEventProcessorImpl implements PaymentEventProcessor {
             ObservedTransaction t1 = candidates.stream()
                     .filter(c -> c.getTransactionId().equals(finding.firstTransactionId()))
                     .findFirst()
-                    .orElseThrow(() -> new IllegalStateException("First transaction not found in candidates: " + finding.firstTransactionId()));
+                    .orElse(transaction);
 
             fraudAlertService.createAlertAndEvaluate(finding, t1, transaction);
+        } else {
+            Optional<FraudFinding> spikeFindingOpt = highValueSpikeRule.evaluate(context);
+            if (spikeFindingOpt.isPresent()) {
+                FraudFinding spikeFinding = spikeFindingOpt.get();
+                fraudAlertService.createAlertAndEvaluate(spikeFinding, transaction, transaction);
+            }
         }
     }
 }

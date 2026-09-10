@@ -154,4 +154,9 @@ public class PaymentService {
                 occurredAt
         );
     }
+
+    @Transactional(readOnly = true)
+    public java.util.List<PaymentTransaction> getTransactionsForAccount(String accountNumber) {
+        return paymentTransactionRepository.findBySenderAccountIdOrReceiverAccountIdOrderByOccurredAtDesc(accountNumber, accountNumber);
+    }
 }

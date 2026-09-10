@@ -4,5 +4,6 @@ public enum HoldStatus {
     ACTIVE,
     RELEASED,
     EXPIRED,
-    CANCELLED
+    CANCELLED,
+    BLOCKED
 }

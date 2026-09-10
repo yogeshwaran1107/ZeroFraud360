@@ -4,7 +4,6 @@ import { api } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import {
   Ban,
-  CheckCircle2,
   UserCheck,
   Unlock,
   X,
@@ -24,16 +23,19 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
   const { user } = useAuth();
   const [selectedHoldAlert, setSelectedHoldAlert] = useState<FraudAlert | null>(null);
   const [releaseReason, setReleaseReason] = useState('');
+  const [selectedConfirmAlert, setSelectedConfirmAlert] = useState<FraudAlert | null>(null);
+  const [confirmReason, setConfirmReason] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [releaseError, setReleaseError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  // Alerts that involved a hold (either HOLD_ACTIVE, RESOLVED, or have holdRequestId)
+  // Alerts that involved a hold (either HOLD_ACTIVE, RESOLVED, CONFIRMED_FRAUD, or have holdRequestId)
   const holdAlerts = alerts.filter(
-    (a) => a.status === 'HOLD_ACTIVE' || a.status === 'RESOLVED' || !!a.holdRequestId
+    (a) => a.status === 'HOLD_ACTIVE' || a.status === 'RESOLVED' || a.status === 'CONFIRMED_FRAUD' || !!a.holdRequestId
   );
 
   const activeHolds = holdAlerts.filter((a) => a.status === 'HOLD_ACTIVE');
   const releasedHolds = holdAlerts.filter((a) => a.status === 'RESOLVED');
+  const confirmedHolds = holdAlerts.filter((a) => a.status === 'CONFIRMED_FRAUD');
 
   const maskAccount = (acc?: string) => {
     if (!acc) return 'XXXX0000';
@@ -58,12 +60,12 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
   const handleReleaseSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedHoldAlert || !releaseReason.trim()) {
-      setReleaseError('Please provide a clearance reason.');
+      setActionError('Please provide a clearance reason.');
       return;
     }
 
     setIsSubmitting(true);
-    setReleaseError(null);
+    setActionError(null);
 
     try {
       const holdTarget = selectedHoldAlert.holdRequestId || selectedHoldAlert.alertId;
@@ -72,7 +74,30 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
       setReleaseReason('');
       onHoldReleased();
     } catch (err: any) {
-      setReleaseError(err.message || 'Failed to release hold.');
+      setActionError(err.message || 'Failed to release hold.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConfirmFraudSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedConfirmAlert || !confirmReason.trim()) {
+      setActionError('Please provide a confirmation reason.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setActionError(null);
+
+    try {
+      const holdTarget = selectedConfirmAlert.holdRequestId || selectedConfirmAlert.alertId;
+      await api.officer.confirmFraud(holdTarget, confirmReason.trim(), user?.username);
+      setSelectedConfirmAlert(null);
+      setConfirmReason('');
+      onHoldReleased();
+    } catch (err: any) {
+      setActionError(err.message || 'Failed to confirm fraud.');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,8 +105,8 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* 3 Top Metric Cards matching Panel 5 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      {/* 4 Top Metric Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Card 1: Total Hold Requests */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
@@ -98,23 +123,36 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
         {/* Card 2: Active Holds */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 mb-2">
-              <CheckCircle2 className="h-5 w-5" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 mb-2">
+              <Unlock className="h-5 w-5" />
             </div>
-            <p className="text-xs font-semibold text-slate-500">Active Holds</p>
+            <p className="text-xs font-semibold text-slate-500">Active (Muted)</p>
             <div className="text-2xl font-black text-slate-900 mt-1">
               {isLoading ? '...' : activeHolds.length}
             </div>
           </div>
         </div>
 
-        {/* Card 3: Released */}
+        {/* Card 3: Fraud Confirmed & Blocked */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
+          <div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-2">
+              <Ban className="h-5 w-5" />
+            </div>
+            <p className="text-xs font-semibold text-slate-500">Confirmed Blocked</p>
+            <div className="text-2xl font-black text-slate-900 mt-1">
+              {isLoading ? '...' : confirmedHolds.length}
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Released */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs flex items-center justify-between">
           <div>
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600 mb-2">
               <UserCheck className="h-5 w-5" />
             </div>
-            <p className="text-xs font-semibold text-slate-500">Released</p>
+            <p className="text-xs font-semibold text-slate-500">Released (False Positive)</p>
             <div className="text-2xl font-black text-slate-900 mt-1">
               {isLoading ? '...' : releasedHolds.length}
             </div>
@@ -152,6 +190,7 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
               ) : (
                 holdAlerts.map((a, idx) => {
                   const isActive = a.status === 'HOLD_ACTIVE';
+                  const isBlocked = a.status === 'CONFIRMED_FRAUD';
                   const isReleased = a.status === 'RESOLVED';
                   return (
                     <tr key={a.alertId} className="hover:bg-slate-50/80 transition-colors">
@@ -170,11 +209,15 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
                       <td className="py-4 px-6">
                         {isActive ? (
                           <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-50 text-red-600 font-bold text-xs border border-red-200">
-                            Active
+                            Active (Muted)
+                          </span>
+                        ) : isBlocked ? (
+                          <span className="inline-flex items-center px-3 py-1 rounded-full bg-rose-50 text-rose-700 font-bold text-xs border border-rose-200">
+                            Blocked (Fraud Confirmed)
                           </span>
                         ) : isReleased ? (
                           <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200">
-                            Released
+                            Released (False Positive)
                           </span>
                         ) : (
                           <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-600 font-medium text-xs">
@@ -184,15 +227,32 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
                       </td>
                       <td className="py-4 px-6 text-right">
                         {isActive ? (
-                          <button
-                            onClick={() => setSelectedHoldAlert(a)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-amber-600 hover:bg-amber-700 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
-                          >
-                            <Unlock className="h-3.5 w-3.5" />
-                            <span>Release</span>
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setActionError(null);
+                                setSelectedConfirmAlert(a);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-red-600 hover:bg-red-700 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Ban className="h-3.5 w-3.5" />
+                              <span>Block &amp; Store Pattern</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setActionError(null);
+                                setSelectedHoldAlert(a);
+                              }}
+                              className="inline-flex items-center gap-1 rounded-lg bg-emerald-700 hover:bg-emerald-800 px-3 py-1.5 text-xs font-bold text-white shadow-xs transition-colors cursor-pointer"
+                            >
+                              <Unlock className="h-3.5 w-3.5" />
+                              <span>Clear &amp; Release</span>
+                            </button>
+                          </div>
+                        ) : isBlocked ? (
+                          <span className="text-[11px] text-rose-600 font-bold">Blocked</span>
                         ) : (
-                          <span className="text-[11px] text-slate-400 font-medium">Cleared</span>
+                          <span className="text-[11px] text-emerald-600 font-medium">Released</span>
                         )}
                       </td>
                     </tr>
@@ -204,6 +264,70 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
         </div>
       </div>
 
+      {/* Confirm Fraud Modal */}
+      {selectedConfirmAlert && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl border border-slate-200 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2 font-bold text-red-900 text-sm">
+                <Ban className="h-4 w-4 text-red-600" />
+                <span>Confirm Fraud &amp; Block Funds</span>
+              </div>
+              <button
+                onClick={() => setSelectedConfirmAlert(null)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {actionError && (
+              <div className="p-2.5 rounded-xl bg-red-50 text-red-600 text-xs border border-red-200">
+                {actionError}
+              </div>
+            )}
+
+            <p className="text-xs text-slate-600">
+              Confirming fraud will permanently lock the held funds in account{' '}
+              <span className="font-mono font-bold text-slate-900">{selectedConfirmAlert.destinationAccountId}</span> from being withdrawn.
+            </p>
+
+            <form onSubmit={handleConfirmFraudSubmit} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-600 font-semibold mb-1">
+                  Official Confirmation Finding / FIR Number *
+                </label>
+                <textarea
+                  value={confirmReason}
+                  onChange={(e) => setConfirmReason(e.target.value)}
+                  rows={3}
+                  placeholder="e.g. Confirmed unauthorized mule transfer. Police FIR #4819."
+                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-600"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedConfirmAlert(null)}
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold disabled:opacity-50 cursor-pointer shadow-md shadow-red-600/30"
+                >
+                  {isSubmitting ? 'Blocking...' : 'Confirm Fraud & Block'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Release Hold Modal */}
       {selectedHoldAlert && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
@@ -211,19 +335,19 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2 font-bold text-slate-900 text-sm">
                 <Unlock className="h-4 w-4 text-amber-600" />
-                <span>Release Account Hold</span>
+                <span>Release Account Hold (False Positive)</span>
               </div>
               <button
                 onClick={() => setSelectedHoldAlert(null)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            {releaseError && (
+            {actionError && (
               <div className="p-2.5 rounded-xl bg-red-50 text-red-600 text-xs border border-red-200">
-                {releaseError}
+                {actionError}
               </div>
             )}
 
@@ -256,14 +380,14 @@ export const AccountHoldsView: React.FC<AccountHoldsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setSelectedHoldAlert(null)}
-                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium"
+                  className="px-4 py-2 rounded-xl text-slate-600 hover:bg-slate-100 font-medium cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold disabled:opacity-50 cursor-pointer"
                 >
                   {isSubmitting ? 'Releasing...' : 'Confirm Release'}
                 </button>

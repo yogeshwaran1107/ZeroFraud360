@@ -53,6 +53,17 @@ public class InternalHoldController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/holds/{holdId}/block")
+    public ResponseEntity<HoldResponseDto> blockHold(
+            @PathVariable("holdId") String holdId,
+            @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+            @RequestBody(required = false) ReleaseHoldRequest request) {
+
+        validateServiceToken(serviceToken);
+        HoldResponseDto response = holdService.blockHold(holdId, request);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/holds/{holdId}")
     public ResponseEntity<HoldResponseDto> getHold(
             @PathVariable("holdId") String holdId,

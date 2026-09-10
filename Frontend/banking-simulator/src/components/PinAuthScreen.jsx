@@ -34,13 +34,16 @@ export default function PinAuthScreen({ onNavigate, transferData, setLastReceipt
 
     setLoading(true);
 
+    const senderAcc = transferData?.senderAcc || localStorage.getItem('activeAccountNumber') || '10001';
+    const receiverAcc = transferData?.recipientAcc || '10002';
+
     const result = await executeTransfer({
-      senderAccountNumber: '1000000001',
-      receiverAccountNumber: transferData?.recipientAcc || '2000000001',
+      senderAccountNumber: senderAcc,
+      receiverAccountNumber: receiverAcc,
       amount: transferData?.amount || '5000',
       upiPin: fullPin,
       paymentRail: transferData?.method === 'upi' ? 'SIMULATED_UPI' : (transferData?.method || 'SIMULATED_UPI').toUpperCase(),
-      remarks: transferData?.remarks || 'Lunch payment'
+      remarks: transferData?.remarks || 'Payment'
     });
 
     setLoading(false);
@@ -50,16 +53,17 @@ export default function PinAuthScreen({ onNavigate, transferData, setLastReceipt
         setLastReceipt({
           transactionId: result.data.transactionId || 'TXN123456789',
           amount: parseFloat(transferData?.amount || '5000'),
-          recipient: transferData?.recipient || 'User B',
-          recipientAcc: transferData?.recipientAcc || '2000000001',
+          recipient: transferData?.recipient || 'Beneficiary',
+          recipientAcc: receiverAcc,
+          senderAcc: senderAcc,
           method: (transferData?.method || 'UPI').toUpperCase(),
-          remarks: transferData?.remarks || 'Lunch payment',
+          remarks: transferData?.remarks || 'Payment',
           occurredAt: new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
         });
       }
       if (onNavigate) onNavigate('success');
     } else {
-      alert(`❌ Transaction Error [${result.error}]: ${result.message}`);
+      alert(`❌ Transaction Error [${result.error || 'FAILED'}]: ${result.message}`);
     }
   };
 

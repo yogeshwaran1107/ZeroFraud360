@@ -58,4 +58,38 @@ public class OfficerController {
             throw ex;
         }
     }
+
+    @PostMapping("/holds/{holdId}/confirm-fraud")
+    @PreAuthorize("hasAnyRole('POLICE', 'CYBER', 'BANK')")
+    public ResponseEntity<Map<String, String>> confirmFraud(
+            @PathVariable("holdId") String holdId,
+            @RequestBody(required = false) BankReleaseHoldRequestDto request,
+            @AuthenticationPrincipal UserPrincipal principal) {
+
+        String officerId = principal != null ? principal.getUsername() :
+                (request != null && request.officerId() != null ? request.officerId() : "OFFICER-DEFAULT");
+        String role = principal != null ? principal.getRole() : "UNKNOWN";
+        String reason = request != null && request.reason() != null ? request.reason() : "Officially confirmed as fraudulent money flow";
+
+        log.warn("OFFICER_CONFIRM_FRAUD_REQUESTED [AUDIT]: officer='{}', role='{}', holdId='{}', correlationId='{}'",
+                officerId, role, holdId, CorrelationContext.getCorrelationId());
+
+        try {
+            holdCoordinator.confirmFraud(holdId, officerId, reason);
+
+            log.warn("OFFICER_CONFIRM_FRAUD_COMPLETED [AUDIT]: officer='{}', role='{}', holdId='{}', status='BLOCKED'",
+                    officerId, role, holdId);
+
+            return ResponseEntity.ok(Map.of(
+                    "holdId", holdId,
+                    "status", "CONFIRMED_FRAUD",
+                    "officerId", officerId,
+                    "reason", reason
+            ));
+        } catch (Exception ex) {
+            log.error("OFFICER_CONFIRM_FRAUD_FAILED [AUDIT]: officer='{}', role='{}', holdId='{}', error='{}'",
+                    officerId, role, holdId, ex.getMessage());
+            throw ex;
+        }
+    }
 }

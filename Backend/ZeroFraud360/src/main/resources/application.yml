@@ -27,7 +27,7 @@ fraud:
   # Configured to: http://localhost:xxxx/fraud/verify
   # Can be updated here or overridden via environment variable: FRAUD_DECISION_API_URL
   decision-api:
-    base-url: ${FRAUD_DECISION_API_URL:http://localhost:xxxx}
+    base-url: ${FRAUD_DECISION_API_URL:http://localhost:8000}
     verify-path: /fraud/verify
     connect-timeout-ms: 2000
     read-timeout-ms: 5000

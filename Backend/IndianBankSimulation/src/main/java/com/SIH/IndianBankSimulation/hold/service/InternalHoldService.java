@@ -101,6 +101,20 @@ public class InternalHoldService {
         return toDto(saved);
     }
 
+    @Transactional
+    public HoldResponseDto blockHold(String holdId, ReleaseHoldRequest request) {
+        AccountHold hold = holdRepository.findByHoldId(holdId)
+                .orElseThrow(() -> new ResourceNotFoundException("Hold", holdId));
+
+        hold.setStatus(HoldStatus.BLOCKED);
+        hold.setReleaseReason(request != null && request.reason() != null ? request.reason() : "Officially confirmed fraud - funds blocked");
+        AccountHold saved = holdRepository.save(hold);
+        log.warn("PERMANENTLY BLOCKED fraudulent funds: holdId={}, account={}, amount={}, reason={}",
+                holdId, saved.getAccountId(), saved.getAmount(), saved.getReleaseReason());
+
+        return toDto(saved);
+    }
+
     @Transactional(readOnly = true)
     public HoldResponseDto getHold(String holdId) {
         AccountHold hold = holdRepository.findByHoldId(holdId)

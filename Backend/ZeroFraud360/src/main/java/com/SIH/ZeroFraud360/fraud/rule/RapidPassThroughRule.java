@@ -41,7 +41,7 @@ public class RapidPassThroughRule implements FraudRule {
             }
 
             // Condition: T2.occurredAt - T1.occurredAt <= maxTimeWindowSeconds (3 minutes default)
-            long diffSeconds = Duration.between(t1.getOccurredAt(), t2.getOccurredAt()).getSeconds();
+            long diffSeconds = Math.abs(Duration.between(t1.getOccurredAt(), t2.getOccurredAt()).getSeconds());
             if (diffSeconds > maxTimeWindowSeconds) {
                 continue;
             }
@@ -51,8 +51,13 @@ public class RapidPassThroughRule implements FraudRule {
                 continue;
             }
 
-            // Condition: T1.amount == T2.amount
-            if (t1.getAmount().compareTo(t2.getAmount()) != 0) {
+            // Condition: T1.amount == T2.amount OR rapid mule ratio pass-through (60% - 105%)
+            boolean exactAmount = t1.getAmount().compareTo(t2.getAmount()) == 0;
+            boolean ratioMatch = t1.getAmount().compareTo(java.math.BigDecimal.ZERO) > 0 &&
+                    t2.getAmount().doubleValue() >= (t1.getAmount().doubleValue() * 0.60) &&
+                    t2.getAmount().doubleValue() <= (t1.getAmount().doubleValue() * 1.05);
+
+            if (!exactAmount && !ratioMatch) {
                 continue;
             }
 

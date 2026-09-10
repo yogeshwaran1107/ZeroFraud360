@@ -1,12 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getBeneficiaries, SAMPLE_ACCOUNTS, getActiveAccountNumber } from '../services/api';
 import './SendMoneyScreen.css';
 
 export default function SendMoneyScreen({ onNavigate, transferData, setTransferData }) {
   const [amount, setAmount] = useState(transferData?.amount || '5000');
   const [selectedMethod, setSelectedMethod] = useState(transferData?.method || 'upi');
-  const [remarks, setRemarks] = useState(transferData?.remarks || 'Lunch payment');
+  const [remarks, setRemarks] = useState(transferData?.remarks || 'Payment');
 
-  const presetAmounts = ['500', '1000', '5000', '10000'];
+  const [recipientName, setRecipientName] = useState(transferData?.recipient || 'Naveen K');
+  const [recipientAcc, setRecipientAcc] = useState(transferData?.recipientAcc || '10002');
+  const [beneficiaries, setBeneficiaries] = useState([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [customAccInput, setCustomAccInput] = useState('');
+
+  const activeAccNo = getActiveAccountNumber();
+
+  useEffect(() => {
+    async function load() {
+      const res = await getBeneficiaries();
+      if (res.success && res.beneficiaries) {
+        setBeneficiaries(res.beneficiaries);
+      }
+    }
+    load();
+  }, []);
+
+  const presetAmounts = ['500', '1000', '2000', '5000', '10000'];
+
+  const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  const handleSelectRecipient = (name, acc) => {
+    setRecipientName(name);
+    setRecipientAcc(acc);
+    setShowPicker(false);
+  };
+
+  const handleCustomAccSubmit = (e) => {
+    e.preventDefault();
+    if (!customAccInput.trim()) return;
+    const match = SAMPLE_ACCOUNTS.find(a => a.accountNumber === customAccInput.trim());
+    if (match) {
+      setRecipientName(match.customerName);
+      setRecipientAcc(match.accountNumber);
+    } else {
+      setRecipientName(`Account ${customAccInput.trim()}`);
+      setRecipientAcc(customAccInput.trim());
+    }
+    setShowPicker(false);
+    setCustomAccInput('');
+  };
 
   const handleContinue = (e) => {
     e.preventDefault();
@@ -15,13 +62,19 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
       return;
     }
 
+    if (recipientAcc === activeAccNo) {
+      alert('Cannot transfer to the same account. Please choose a different recipient.');
+      return;
+    }
+
     if (setTransferData) {
       setTransferData({
         amount,
         method: selectedMethod,
         remarks,
-        recipient: 'User B',
-        recipientAcc: '2000000001'
+        recipient: recipientName,
+        recipientAcc: recipientAcc,
+        senderAcc: activeAccNo
       });
     }
 
@@ -31,8 +84,6 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
   return (
     <div className="mobile-wrapper">
       <div className="send-money-screen">
-
-
         <div className="page-header">
           <button className="back-btn" onClick={() => onNavigate && onNavigate('dashboard')}>
             <i className="fa-solid fa-chevron-left"></i>
@@ -43,16 +94,22 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
 
         <div className="send-money-content">
           <div className="form-section">
-            <label className="section-label">Transfer To</label>
+            <label className="section-label">Transfer To (Beneficiary)</label>
             <div className="recipient-card">
               <div className="recipient-info">
-                <div className="recipient-avatar">UB</div>
+                <div className="recipient-avatar">{getInitials(recipientName)}</div>
                 <div className="recipient-details">
-                  <span className="recipient-name">User B (Bob Verma)</span>
-                  <span className="recipient-acc">ACC: 2000000001</span>
+                  <span className="recipient-name">{recipientName}</span>
+                  <span className="recipient-acc">ACC ID: {recipientAcc}</span>
                 </div>
               </div>
-              <button className="change-btn" type="button">Change</button>
+              <button 
+                className="change-btn" 
+                type="button"
+                onClick={() => setShowPicker(true)}
+              >
+                Change
+              </button>
             </div>
           </div>
 
@@ -98,7 +155,7 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
                 </div>
                 <div className="method-details">
                   <span className="method-title">UPI (Instant)</span>
-                  <span className="method-sub">Real-time transfer</span>
+                  <span className="method-sub">Real-time settlement</span>
                 </div>
               </label>
 
@@ -114,7 +171,7 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
                 </div>
                 <div className="method-details">
                   <span className="method-title">IMPS (Instant)</span>
-                  <span className="method-sub">Real-time transfer</span>
+                  <span className="method-sub">Immediate payment service</span>
                 </div>
               </label>
 
@@ -130,7 +187,7 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
                 </div>
                 <div className="method-details">
                   <span className="method-title">NEFT (Batch)</span>
-                  <span className="method-sub">Processed in batches</span>
+                  <span className="method-sub">Electronic funds transfer</span>
                 </div>
               </label>
 
@@ -145,8 +202,8 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
                   <i className="fa-solid fa-indian-rupee-sign"></i>
                 </div>
                 <div className="method-details">
-                  <span className="method-title">RTGS (Real-time)</span>
-                  <span className="method-sub">For high value transfers</span>
+                  <span className="method-title">RTGS (High Value)</span>
+                  <span className="method-sub">Real-time gross settlement</span>
                 </div>
               </label>
             </div>
@@ -159,7 +216,7 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
               className="remarks-input" 
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
-              placeholder="Add a note"
+              placeholder="Add a payment note"
             />
           </div>
         </div>
@@ -169,6 +226,97 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
             Continue
           </button>
         </div>
+
+        {/* Change Recipient Modal */}
+        {showPicker && (
+          <div className="login-modal-overlay">
+            <div className="login-modal-card">
+              <div className="login-modal-header">
+                <h3>Select Beneficiary</h3>
+                <button className="modal-close-btn" onClick={() => setShowPicker(false)}>
+                  <i className="fa-solid fa-xmark"></i>
+                </button>
+              </div>
+
+              {/* Saved Beneficiaries List */}
+              <div style={{ maxHeight: 200, overflowY: 'auto', marginBottom: 16 }}>
+                <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Your Beneficiaries:</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 8 }}>
+                  {beneficiaries.map((b) => (
+                    <button
+                      key={b.id || b.accountNumber}
+                      type="button"
+                      onClick={() => handleSelectRecipient(b.beneficiaryName, b.accountNumber)}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        background: '#1e293b',
+                        border: '1px solid #334155',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        color: '#ffffff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <span style={{ fontWeight: 600 }}>{b.beneficiaryName}</span>
+                      <span style={{ fontFamily: 'JetBrains Mono', color: '#38bdf8', fontSize: 12 }}>
+                        {b.accountNumber}
+                      </span>
+                    </button>
+                  ))}
+                  {beneficiaries.length === 0 && (
+                    <p style={{ fontSize: 12, color: '#64748b' }}>No saved beneficiaries yet.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Quick Select All Personas */}
+              <div style={{ marginBottom: 16 }}>
+                <span style={{ fontSize: 12, color: '#94a3b8', fontWeight: 600 }}>Or Select Teammate Persona:</span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                  {SAMPLE_ACCOUNTS
+                    .filter(a => a.accountNumber !== activeAccNo)
+                    .map(a => (
+                      <button
+                        key={a.accountNumber}
+                        type="button"
+                        onClick={() => handleSelectRecipient(a.customerName, a.accountNumber)}
+                        style={{
+                          background: '#1e293b',
+                          border: '1px solid #334155',
+                          borderRadius: 8,
+                          color: '#e2e8f0',
+                          padding: '6px 10px',
+                          fontSize: 12,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {a.customerName} ({a.accountNumber})
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              {/* Or Type 5-Digit Account Number */}
+              <form onSubmit={handleCustomAccSubmit}>
+                <div className="form-group" style={{ marginBottom: 10 }}>
+                  <label>Or Enter 5-Digit Account Number</label>
+                  <input
+                    type="text"
+                    className="modal-input"
+                    value={customAccInput}
+                    onChange={(e) => setCustomAccInput(e.target.value)}
+                    placeholder="e.g. 10003"
+                  />
+                </div>
+                <button type="submit" className="btn-modal-submit">
+                  Use This Account
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

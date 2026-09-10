@@ -87,6 +87,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/me", "/api/auth/logout").authenticated()
                         // Fraud monitoring APIs - authorized for all 3 officer roles
                         .requestMatchers("/api/fraud/**").hasAnyRole("POLICE", "CYBER", "BANK")
+                        // Notification feed APIs - authorized for all 3 officer roles
+                        .requestMatchers("/api/notifications/**").hasAnyRole("POLICE", "CYBER", "BANK")
                         // Officer control APIs - authorized for all 3 officer roles
                         .requestMatchers("/api/officer/**").hasAnyRole("POLICE", "CYBER", "BANK")
                         // Deny any other unmapped request by requiring authentication
@@ -133,7 +135,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:*", "http://127.0.0.1:*"));
+        config.setAllowedOriginPatterns(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(List.of("X-Correlation-Id", "Authorization"));

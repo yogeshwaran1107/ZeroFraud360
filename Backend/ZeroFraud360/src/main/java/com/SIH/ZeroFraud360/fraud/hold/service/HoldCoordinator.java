@@ -25,13 +25,16 @@ public class HoldCoordinator {
     private final BankSimulationHoldClient holdClient;
     private final HoldRequestRepository holdRequestRepository;
     private final FraudAlertRepository alertRepository;
+    private final com.SIH.ZeroFraud360.fraud.repository.FraudPatternRepository patternRepository;
 
     public HoldCoordinator(BankSimulationHoldClient holdClient,
                            HoldRequestRepository holdRequestRepository,
-                           FraudAlertRepository alertRepository) {
+                           FraudAlertRepository alertRepository,
+                           com.SIH.ZeroFraud360.fraud.repository.FraudPatternRepository patternRepository) {
         this.holdClient = holdClient;
         this.holdRequestRepository = holdRequestRepository;
         this.alertRepository = alertRepository;
+        this.patternRepository = patternRepository;
     }
 
     @Transactional
@@ -98,7 +101,11 @@ public class HoldCoordinator {
                 : holdId;
 
         log.info("Releasing hold: holdId={}, bankHoldId={}, officer={}", holdId, effectiveBankHoldId, officerId);
-        holdClient.releaseHold(effectiveBankHoldId, new BankReleaseHoldRequestDto(officerId, reason));
+        try {
+            holdClient.releaseHold(effectiveBankHoldId, new BankReleaseHoldRequestDto(officerId, reason));
+        } catch (Exception ex) {
+            log.warn("Bank simulation release returned: {} (proceeding with ZeroFraud360 clearance)", ex.getMessage());
+        }
 
         if (holdRequest != null) {
             holdRequest.setStatus("RELEASED");
@@ -107,9 +114,88 @@ public class HoldCoordinator {
 
             alertRepository.findByAlertId(holdRequest.getAlertId()).ifPresent(alert -> {
                 alert.setStatus(AlertStatus.RESOLVED);
+                alert.setDecisionReason("Cleared by officer (" + officerId + "): " + reason + " [False Positive]");
                 alert.setResolvedAt(Instant.now());
                 alertRepository.save(alert);
             });
+        } else {
+            alertRepository.findByAlertId(holdId).ifPresent(alert -> {
+                alert.setStatus(AlertStatus.RESOLVED);
+                alert.setDecisionReason("Cleared by officer (" + officerId + "): " + reason + " [False Positive]");
+                alert.setResolvedAt(Instant.now());
+                alertRepository.save(alert);
+            });
+        }
+    }
+
+    @Transactional
+    public void confirmFraud(String holdId, String officerId, String reason) {
+        HoldRequest holdRequest = holdRequestRepository.findByRequestId(holdId)
+                .or(() -> holdRequestRepository.findByAlertId(holdId))
+                .orElse(null);
+
+        String effectiveBankHoldId = holdRequest != null && holdRequest.getBankHoldId() != null
+                ? holdRequest.getBankHoldId()
+                : holdId;
+
+        log.warn("OFFICIALLY CONFIRMING FRAUD & BLOCKING FUNDS: holdId={}, bankHoldId={}, officer={}", holdId, effectiveBankHoldId, officerId);
+        try {
+            holdClient.blockHold(effectiveBankHoldId, new BankReleaseHoldRequestDto(officerId, reason));
+        } catch (Exception ex) {
+            log.warn("Bank simulation block returned: {} (proceeding with ZeroFraud360 pattern storage)", ex.getMessage());
+        }
+
+        FraudAlert alertObj = null;
+        if (holdRequest != null) {
+            holdRequest.setStatus("BLOCKED");
+            holdRequest.setCompletedAt(Instant.now());
+            holdRequestRepository.save(holdRequest);
+
+            var alertOpt = alertRepository.findByAlertId(holdRequest.getAlertId());
+            if (alertOpt.isPresent()) {
+                alertObj = alertOpt.get();
+                alertObj.setStatus(AlertStatus.CONFIRMED_FRAUD);
+                alertObj.setDecisionReason("Confirmed fraud by officer (" + officerId + "): " + reason + " [Funds Blocked]");
+                alertObj.setResolvedAt(Instant.now());
+                alertRepository.save(alertObj);
+            }
+        } else {
+            var alertOpt = alertRepository.findByAlertId(holdId);
+            if (alertOpt.isPresent()) {
+                alertObj = alertOpt.get();
+                alertObj.setStatus(AlertStatus.CONFIRMED_FRAUD);
+                alertObj.setDecisionReason("Confirmed fraud by officer (" + officerId + "): " + reason + " [Funds Blocked]");
+                alertObj.setResolvedAt(Instant.now());
+                alertRepository.save(alertObj);
+            }
+        }
+
+        // Store detected pattern in Fraud Patterns Registry
+        if (alertObj != null) {
+            String patternId = "PAT-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+            String patternName = String.format("Mule Network: %s -> %s (₹%s)",
+                    alertObj.getSourceAccountId() != null ? alertObj.getSourceAccountId() : "UNKNOWN",
+                    alertObj.getDestinationAccountId() != null ? alertObj.getDestinationAccountId() : "UNKNOWN",
+                    alertObj.getSecondAmount() != null ? alertObj.getSecondAmount().stripTrailingZeros().toPlainString() : "0");
+
+            com.SIH.ZeroFraud360.fraud.domain.FraudPattern pattern = new com.SIH.ZeroFraud360.fraud.domain.FraudPattern(
+                    patternId,
+                    patternName,
+                    alertObj.getPatternType() != null ? alertObj.getPatternType() : "RAPID_PASS_THROUGH",
+                    reason,
+                    "CRITICAL",
+                    alertObj.getSourceAccountId(),
+                    alertObj.getIntermediateAccountId(),
+                    alertObj.getDestinationAccountId(),
+                    alertObj.getFirstAmount(),
+                    alertObj.getSecondAmount(),
+                    alertObj.getTimeDifferenceSeconds() != null ? alertObj.getTimeDifferenceSeconds().intValue() : 180,
+                    "CONFIRMED_FRAUD_BLOCK",
+                    officerId,
+                    alertObj.getAlertId()
+            );
+            patternRepository.save(pattern);
+            log.info("Stored confirmed fraud pattern in registry: patternId={}, name='{}'", patternId, patternName);
         }
     }
 }

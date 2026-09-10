@@ -64,24 +64,24 @@ export const HoldReleaseModal: React.FC<HoldReleaseModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg rounded-2xl border border-slate-800 bg-slate-900 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-xs p-4 animate-in fade-in duration-150">
+      <div className="relative w-full max-w-lg rounded-2xl border border-slate-200 bg-white shadow-2xl overflow-hidden text-slate-800">
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-800 px-6 py-4 bg-slate-950/50">
+        <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 bg-slate-50/70">
           <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
               <Unlock className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">Release Financial Hold</h3>
-              <p className="text-xs text-slate-400">
+              <h3 className="text-base font-bold text-slate-900">Release Financial Hold</h3>
+              <p className="text-xs text-slate-500">
                 Officer Audit Action &bull; Unlocks held funds on target account
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
           >
             <X className="h-5 w-5" />
           </button>
@@ -90,46 +90,46 @@ export const HoldReleaseModal: React.FC<HoldReleaseModalProps> = ({
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="flex items-start gap-2.5 rounded-lg border border-red-500/30 bg-red-950/30 p-3 text-xs text-red-300">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-red-400 mt-0.5" />
+            <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3 text-xs text-red-700">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-red-500 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="flex items-center gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-950/30 p-3 text-xs text-emerald-300">
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" />
+            <div className="flex items-center gap-2.5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-700">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
               <span>{successMessage}</span>
             </div>
           )}
 
           {/* Case Metadata Box */}
-          <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3.5 space-y-2 text-xs">
+          <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 space-y-2.5 text-xs">
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Alert Identifier:</span>
-              <span className="font-mono font-bold text-slate-200">{alert.alertId}</span>
+              <span className="text-slate-500 font-medium">Alert Identifier:</span>
+              <span className="font-mono font-bold text-slate-800">{alert.alertId}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Hold Reference:</span>
-              <span className="font-mono text-amber-400">{holdReferenceId}</span>
+              <span className="text-slate-500 font-medium">Hold Reference:</span>
+              <span className="font-mono font-semibold text-amber-700">{holdReferenceId}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Frozen Recipient (Account C):</span>
-              <span className="font-mono font-semibold text-rose-400">
+              <span className="text-slate-500 font-medium">Frozen Recipient (Account C):</span>
+              <span className="font-mono font-semibold text-rose-700">
                 {alert.destinationAccountId}
               </span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-slate-400">Frozen Amount:</span>
-              <span className="font-mono font-extrabold text-white text-sm">
+              <span className="text-slate-500 font-medium">Frozen Amount:</span>
+              <span className="font-mono font-extrabold text-slate-900 text-sm">
                 ₹{Number(alert.secondAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
               </span>
             </div>
-            <div className="flex justify-between items-center pt-2 border-t border-slate-800/80">
-              <span className="text-slate-400 flex items-center gap-1">
+            <div className="flex justify-between items-center pt-2.5 border-t border-slate-200">
+              <span className="text-slate-500 flex items-center gap-1 font-medium">
                 <User className="h-3 w-3 text-slate-400" /> Authorized Officer:
               </span>
-              <span className="font-semibold text-blue-400">
+              <span className="font-bold text-blue-700">
                 {user?.username} ({user?.role?.replace('ROLE_', '')})
               </span>
             </div>
@@ -137,22 +137,22 @@ export const HoldReleaseModal: React.FC<HoldReleaseModalProps> = ({
 
           {/* Reason Input */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
-              Investigation Clearance Reason <span className="text-rose-400">*</span>
+            <label className="block text-xs font-bold text-slate-700 mb-1.5">
+              Investigation Clearance Reason <span className="text-rose-500">*</span>
             </label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               placeholder="Provide clear justification for unlocking the frozen funds..."
-              className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2.5 text-xs text-white placeholder-slate-500 focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500 transition-colors"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-colors"
               required
             />
           </div>
 
           {/* Quick Preset Buttons */}
           <div>
-            <span className="block text-[11px] font-medium text-slate-400 mb-1.5">
+            <span className="block text-[11px] font-semibold text-slate-500 mb-1.5">
               Quick-Fill Presets:
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -161,7 +161,7 @@ export const HoldReleaseModal: React.FC<HoldReleaseModalProps> = ({
                   type="button"
                   key={idx}
                   onClick={() => setReason(p)}
-                  className="rounded-md bg-slate-800/80 hover:bg-slate-700 border border-slate-700 px-2.5 py-1 text-[11px] text-slate-300 transition-colors text-left"
+                  className="rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-200 px-2.5 py-1 text-[11px] text-slate-700 transition-colors text-left font-medium cursor-pointer"
                 >
                   {p.length > 38 ? p.slice(0, 38) + '...' : p}
                 </button>
@@ -170,18 +170,18 @@ export const HoldReleaseModal: React.FC<HoldReleaseModalProps> = ({
           </div>
 
           {/* Footer Actions */}
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl px-4 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+              className="rounded-xl px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex items-center gap-2 rounded-xl bg-amber-600 hover:bg-amber-500 px-5 py-2 text-xs font-bold text-white shadow-lg shadow-amber-900/30 transition-all disabled:opacity-50"
+              className="flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 px-5 py-2 text-xs font-bold text-white shadow-xs transition-all disabled:opacity-50 cursor-pointer"
             >
               <ShieldCheck className="h-4 w-4" />
               {isSubmitting ? 'Dispatching Release...' : 'Confirm & Release Hold'}

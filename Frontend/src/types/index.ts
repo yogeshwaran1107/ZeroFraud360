@@ -20,6 +20,7 @@ export type AlertStatus =
   | 'HOLD_REQUESTED'
   | 'HOLD_ACTIVE'
   | 'RESOLVED'
+  | 'CONFIRMED_FRAUD'
   | 'DISMISSED'
   | 'ERROR'
   | string;
@@ -107,4 +108,24 @@ export interface ApiError {
   message: string;
   correlationId?: string;
   fieldErrors?: Record<string, string> | null;
+}
+
+export interface FraudPattern {
+  id: number;
+  patternId: string;
+  patternName: string;
+  patternType: string;
+  description: string;
+  riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' | string;
+  sourceAccount?: string;
+  muleAccount?: string;
+  destinationAccount?: string;
+  minAmount?: number;
+  maxAmount?: number;
+  timeWindowSeconds?: number;
+  actionTaken: string;
+  confirmedByOfficer?: string;
+  alertId?: string;
+  status: 'ACTIVE' | 'ARCHIVED' | string;
+  createdAt: string;
 }

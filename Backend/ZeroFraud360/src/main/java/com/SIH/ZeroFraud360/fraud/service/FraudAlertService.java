@@ -11,6 +11,7 @@ import com.SIH.ZeroFraud360.fraud.domain.FraudAlert;
 import com.SIH.ZeroFraud360.fraud.hold.service.HoldCoordinator;
 import com.SIH.ZeroFraud360.fraud.repository.FraudAlertRepository;
 import com.SIH.ZeroFraud360.fraud.rule.FraudFinding;
+import com.SIH.ZeroFraud360.notification.service.NotificationBroadcastService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,13 +29,16 @@ public class FraudAlertService {
     private final FraudAlertRepository alertRepository;
     private final DecisionApiClient decisionApiClient;
     private final HoldCoordinator holdCoordinator;
+    private final NotificationBroadcastService notificationService;
 
     public FraudAlertService(FraudAlertRepository alertRepository,
                              DecisionApiClient decisionApiClient,
-                             HoldCoordinator holdCoordinator) {
+                             HoldCoordinator holdCoordinator,
+                             NotificationBroadcastService notificationService) {
         this.alertRepository = alertRepository;
         this.decisionApiClient = decisionApiClient;
         this.holdCoordinator = holdCoordinator;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -103,6 +107,13 @@ public class FraudAlertService {
 
                 // Command IndianBankSimulation to place hold on destination account
                 holdCoordinator.executeStopHold(alert);
+
+                // Broadcast urgent notification to Police, Cyber Crime, Bank, and Victim
+                try {
+                    notificationService.broadcastFraudAlert(alert);
+                } catch (Exception nEx) {
+                    log.error("Failed to broadcast notifications for alert {}: {}", alertId, nEx.getMessage());
+                }
             } else {
                 alert.setDecision(DecisionType.ALLOW);
                 alert.setDecisionReason(decResponse.reason());

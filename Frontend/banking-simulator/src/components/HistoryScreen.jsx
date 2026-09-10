@@ -1,65 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { getTransactionHistory, getActiveAccountNumber, SAMPLE_ACCOUNTS } from '../services/api';
 import './HistoryScreen.css';
 
 export default function HistoryScreen({ onNavigate }) {
   const [activeFilter, setActiveFilter] = useState('All');
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const transactions = [
-    {
-      id: 1,
-      name: 'User B',
-      type: 'Sent',
-      mode: 'UPI',
-      amount: 5000,
-      isDebit: true,
-      timestamp: '10 Sep 2026, 09:41 AM'
-    },
-    {
-      id: 2,
-      name: 'User B',
-      type: 'Received',
-      mode: 'UPI',
-      amount: 2000,
-      isDebit: false,
-      timestamp: '09 Sep 2026, 06:12 PM'
-    },
-    {
-      id: 3,
-      name: 'User B',
-      type: 'Sent',
-      mode: 'IMPS',
-      amount: 1000,
-      isDebit: true,
-      timestamp: '08 Sep 2026, 11:30 AM'
-    },
-    {
-      id: 4,
-      name: 'Salary Credit',
-      type: 'Received',
-      mode: 'NEFT',
-      amount: 50000,
-      isDebit: false,
-      timestamp: '01 Sep 2026, 09:00 AM'
-    },
-    {
-      id: 5,
-      name: 'Electricity Bill',
-      type: 'Sent',
-      mode: 'UPI',
-      amount: 1200,
-      isDebit: true,
-      timestamp: '28 Aug 2026, 07:45 PM'
-    },
-    {
-      id: 6,
-      name: 'User B',
-      type: 'Received',
-      mode: 'UPI',
-      amount: 3000,
-      isDebit: false,
-      timestamp: '25 Aug 2026, 04:20 PM'
+  const activeAccNo = getActiveAccountNumber();
+
+  const getAccountName = (accNo) => {
+    const found = SAMPLE_ACCOUNTS.find(a => a.accountNumber === String(accNo));
+    return found ? found.customerName : `Account ${accNo}`;
+  };
+
+  useEffect(() => {
+    async function loadHistory() {
+      setLoading(true);
+      const res = await getTransactionHistory(activeAccNo);
+      if (res.success && res.transactions && res.transactions.length > 0) {
+        const formatted = res.transactions.map((t, idx) => {
+          const isDebit = String(t.senderAccountId) === String(activeAccNo);
+          const counterParty = isDebit ? t.receiverAccountId : t.senderAccountId;
+          const name = getAccountName(counterParty);
+          const dateStr = t.occurredAt 
+            ? new Date(t.occurredAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })
+            : 'Recent';
+
+          const rail = (t.paymentRail || 'UPI').replace('SIMULATED_', '');
+
+          return {
+            id: t.id || t.transactionId || idx,
+            name,
+            type: isDebit ? 'Sent' : 'Received',
+            mode: rail,
+            amount: parseFloat(t.amount || 0),
+            isDebit,
+            timestamp: dateStr
+          };
+        });
+        setTransactions(formatted);
+      } else {
+        // Sample baseline history for this account
+        setTransactions([
+          {
+            id: 101,
+            name: 'Initial Account Credit',
+            type: 'Received',
+            mode: 'NEFT',
+            amount: 25000,
+            isDebit: false,
+            timestamp: '01 Sep 2026, 10:00 AM'
+          }
+        ]);
+      }
+      setLoading(false);
     }
-  ];
+    loadHistory();
+  }, [activeAccNo]);
 
   const filterCategories = ['All', 'UPI', 'IMPS', 'NEFT', 'RTGS'];
 
@@ -70,8 +68,6 @@ export default function HistoryScreen({ onNavigate }) {
   return (
     <div className="mobile-wrapper">
       <div className="history-screen">
-
-
         <div className="page-header">
           <button className="back-btn" onClick={() => onNavigate && onNavigate('dashboard')}>
             <i className="fa-solid fa-chevron-left"></i>
@@ -93,31 +89,37 @@ export default function HistoryScreen({ onNavigate }) {
         </div>
 
         <div className="history-list-content">
-          {filteredTransactions.map((item) => (
-            <div 
-              key={item.id} 
-              className="history-list-item"
-              onClick={() => onNavigate && onNavigate('details')}
-            >
-              <div className={`history-icon-badge ${item.isDebit ? 'debit' : 'credit'}`}>
-                <i className={`fa-solid ${item.isDebit ? 'fa-arrow-up-right-from-square' : 'fa-arrow-down'}`}></i>
-              </div>
-
-              <div className="history-item-details">
-                <span className="item-name">{item.name}</span>
-                <span className="item-mode">{item.type} • {item.mode}</span>
-              </div>
-
-              <div className="history-item-right">
-                <div className={`item-amount ${item.isDebit ? 'debit-amount' : 'credit-amount'}`}>
-                  {item.isDebit ? '- ₹ ' : '+ ₹ '}{item.amount.toLocaleString('en-IN')}
+          {loading ? (
+            <p style={{ textAlign: 'center', padding: 20, color: '#64748b' }}>Loading transactions...</p>
+          ) : filteredTransactions.length === 0 ? (
+            <p style={{ textAlign: 'center', padding: 20, color: '#64748b' }}>No transactions found.</p>
+          ) : (
+            filteredTransactions.map((item) => (
+              <div 
+                key={item.id} 
+                className="history-list-item"
+                onClick={() => onNavigate && onNavigate('dashboard')}
+              >
+                <div className={`history-icon-badge ${item.isDebit ? 'debit' : 'credit'}`}>
+                  <i className={`fa-solid ${item.isDebit ? 'fa-arrow-up-right-from-square' : 'fa-arrow-down'}`}></i>
                 </div>
-                <div className="item-time">{item.timestamp}</div>
-              </div>
 
-              <i className="fa-solid fa-chevron-right chevron-icon"></i>
-            </div>
-          ))}
+                <div className="history-item-details">
+                  <span className="item-name">{item.name}</span>
+                  <span className="item-mode">{item.type} • {item.mode}</span>
+                </div>
+
+                <div className="history-item-right">
+                  <div className={`item-amount ${item.isDebit ? 'debit-amount' : 'credit-amount'}`}>
+                    {item.isDebit ? '- ₹ ' : '+ ₹ '}{Number(item.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="item-time">{item.timestamp}</div>
+                </div>
+
+                <i className="fa-solid fa-chevron-right chevron-icon"></i>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

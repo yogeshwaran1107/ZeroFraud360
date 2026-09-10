@@ -4,10 +4,18 @@ import './SuccessScreen.css';
 export default function SuccessScreen({ onNavigate, lastReceipt }) {
   const amount = lastReceipt?.amount || 5000;
   const txnId = lastReceipt?.transactionId || 'TXN123456789';
-  const recipient = lastReceipt?.recipient || 'User B';
+  const recipient = lastReceipt?.recipient || 'Beneficiary';
+  const recipientAcc = lastReceipt?.recipientAcc || '10002';
   const method = lastReceipt?.method || 'UPI';
-  const remarks = lastReceipt?.remarks || 'Lunch payment';
+  const remarks = lastReceipt?.remarks || 'Transfer';
   const date = lastReceipt?.occurredAt || new Date().toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' });
+
+  const getInitials = (name) => {
+    if (!name) return 'B';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   return (
     <div className="mobile-wrapper">
@@ -26,11 +34,11 @@ export default function SuccessScreen({ onNavigate, lastReceipt }) {
           <div className="success-amount">₹ {amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</div>
 
           <div className="recipient-row-card">
-            <div className="recipient-avatar">UB</div>
+            <div className="recipient-avatar">{getInitials(recipient)}</div>
             <div className="recipient-text-group">
               <span className="to-label">To</span>
               <h3 className="recipient-name">{recipient}</h3>
-              <span className="recipient-acc">XXXX 5678</span>
+              <span className="recipient-acc">ACC ID: {recipientAcc}</span>
             </div>
           </div>
 

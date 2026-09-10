@@ -2,6 +2,7 @@ import type {
   AuthResponse,
   UserProfile,
   FraudAlert,
+  FraudPattern,
   ObservedTransaction,
   ReleaseHoldResponse,
   PaymentSuccessEventPayload,
@@ -139,6 +140,26 @@ export const api = {
     getTransactions: async (): Promise<ObservedTransaction[]> => {
       return apiRequest<ObservedTransaction[]>('/api/fraud/transactions');
     },
+
+    getPatterns: async (): Promise<FraudPattern[]> => {
+      return apiRequest<FraudPattern[]>('/api/fraud/patterns');
+    },
+
+    createPattern: async (pattern: Partial<FraudPattern>): Promise<FraudPattern> => {
+      return apiRequest<FraudPattern>('/api/fraud/patterns', {
+        method: 'POST',
+        body: JSON.stringify(pattern),
+      });
+    },
+
+    deletePattern: async (patternId: string): Promise<{ patternId: string; status: string }> => {
+      return apiRequest<{ patternId: string; status: string }>(
+        `/api/fraud/patterns/${encodeURIComponent(patternId)}`,
+        {
+          method: 'DELETE',
+        }
+      );
+    },
   },
 
   officer: {
@@ -157,6 +178,32 @@ export const api = {
           }),
         }
       );
+    },
+
+    confirmFraud: async (
+      holdId: string,
+      reason: string,
+      officerId?: string
+    ): Promise<{ holdId: string; status: string; officerId: string; reason: string }> => {
+      return apiRequest<{ holdId: string; status: string; officerId: string; reason: string }>(
+        `/api/officer/holds/${encodeURIComponent(holdId)}/confirm-fraud`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            officerId,
+            reason,
+          }),
+        }
+      );
+    },
+  },
+
+  notifications: {
+    getRecent: async (): Promise<any[]> => {
+      return apiRequest<any[]>('/api/notifications');
+    },
+    getByAlertId: async (alertId: string): Promise<any[]> => {
+      return apiRequest<any[]>(`/api/notifications/alert/${encodeURIComponent(alertId)}`);
     },
   },
 

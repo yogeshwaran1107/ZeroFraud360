@@ -31,4 +31,10 @@ public class PaymentController {
         PaymentTransferResponse response = paymentService.executePayment(request);
         return ResponseEntity.ok(response);
     }
+
+    @org.springframework.web.bind.annotation.GetMapping("/api/payments/history/{accountNumber}")
+    public ResponseEntity<java.util.List<com.SIH.IndianBankSimulation.payment.domain.PaymentTransaction>> getHistory(
+            @org.springframework.web.bind.annotation.PathVariable String accountNumber) {
+        return ResponseEntity.ok(paymentService.getTransactionsForAccount(accountNumber));
+    }
 }

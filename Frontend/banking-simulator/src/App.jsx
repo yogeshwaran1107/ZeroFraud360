@@ -10,15 +10,16 @@ import TransactionDetailsScreen from './components/TransactionDetailsScreen';
 import './index.css';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState('welcome'); // Starts on Welcome Landing screen
+  const [currentPage, setCurrentPage] = useState('welcome');
 
   // Dynamic transfer state shared across IndianBankSim flow
   const [transferData, setTransferData] = useState({
     amount: '5000',
     method: 'upi',
-    remarks: 'Lunch payment',
-    recipient: 'User B (Bob Verma)',
-    recipientAcc: '2000000001'
+    remarks: 'Transfer payment',
+    recipient: 'Naveen K',
+    recipientAcc: '10002',
+    senderAcc: '10001'
   });
 
   const [lastReceipt, setLastReceipt] = useState(null);
@@ -27,15 +28,38 @@ export default function App() {
     setCurrentPage(page);
   };
 
+  const handleSelectBeneficiary = (ben) => {
+    setTransferData(prev => ({
+      ...prev,
+      recipient: ben.recipient,
+      recipientAcc: ben.recipientAcc,
+      senderAcc: localStorage.getItem('activeAccountNumber') || '10001'
+    }));
+    setCurrentPage('transfer');
+  };
+
   return (
     <div>
       {/* Native Mobile Screen Router */}
       {currentPage === 'welcome' && (
-        <WelcomeScreen onNavigate={handleNavigate} />
+        <WelcomeScreen 
+          onNavigate={handleNavigate} 
+          onLoginSuccess={(acc) => {
+            if (acc) {
+              setTransferData(prev => ({
+                ...prev,
+                senderAcc: acc.accountNumber
+              }));
+            }
+          }}
+        />
       )}
 
       {currentPage === 'dashboard' && (
-        <DashboardScreen onNavigate={handleNavigate} />
+        <DashboardScreen 
+          onNavigate={handleNavigate} 
+          onSelectBeneficiary={handleSelectBeneficiary}
+        />
       )}
 
       {currentPage === 'transfer' && (

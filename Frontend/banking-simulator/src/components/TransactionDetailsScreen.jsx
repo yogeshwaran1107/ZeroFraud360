@@ -26,10 +26,10 @@ export default function TransactionDetailsScreen({ onNavigate }) {
         <div className="txn-details-content">
           <div className="txn-info-card">
             <div className="txn-recipient-header">
-              <div className="recipient-avatar">UB</div>
+              <div className="recipient-avatar">NK</div>
               <div className="recipient-text">
-                <h3 className="recipient-name">User B</h3>
-                <span className="recipient-acc">XXXX 5678</span>
+                <h3 className="recipient-name">Naveen K</h3>
+                <span className="recipient-acc">ACC ID: 10002</span>
               </div>
             </div>
 

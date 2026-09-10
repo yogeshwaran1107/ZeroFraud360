@@ -63,4 +63,17 @@ public class BankSimulationHoldClient {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+    public void blockHold(String holdId, BankReleaseHoldRequestDto request) {
+        String url = bankSimBaseUrl.replaceAll("/+$", "") + "/internal/v1/holds/" + holdId + "/block";
+        log.warn("Requesting permanent fund block from IndianBankSimulation at {}: holdId={}", url, holdId);
+
+        restClient.post()
+                .uri(url)
+                .header("X-Service-Token", serviceToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(request)
+                .retrieve()
+                .toBodilessEntity();
+    }
 }
