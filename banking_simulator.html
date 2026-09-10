@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroFraud360 - Banking Simulator & Fraud Detection Engine</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #070a13;
+            --card-bg: rgba(15, 23, 42, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --primary-blue: #38bdf8;
+            --primary-glow: rgba(56, 189, 248, 0.25);
+            --accent-cyan: #06b6d4;
+            --success-green: #10b981;
+            --warning-amber: #f59e0b;
+            --danger-red: #ef4444;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --font-main: 'Plus Jakarta Sans', sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: 
+                radial-gradient(circle at 15% 15%, rgba(56, 189, 248, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+            color: var(--text-main);
+            font-family: var(--font-main);
+            min-height: 100vh;
+            padding-bottom: 50px;
+            overflow-x: hidden;
+        }
+
+        /* Header Navigation */
+        header {
+            background: rgba(11, 17, 32, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--card-border);
+            padding: 18px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, #0284c7, #06b6d4);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: white;
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+
+        .logo-text h1 {
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(90deg, #ffffff, #93c5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-text span {
+            font-size: 12px;
+            color: var(--primary-blue);
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-badge {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: var(--success-green);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success-green);
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        @keyframes pulse-dot {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Container Layout */
+        .main-container {
+            max-width: 1400px;
+            margin: 30px auto;
+            padding: 0 24px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Glass Cards */
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .card-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title i {
+            color: var(--primary-blue);
+        }
+
+        /* Account Balance Header Banner */
+        .account-banner {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.8));
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 20px;
+            padding: 24px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .account-banner::before {
+            content: '';
+            position: absolute;
+            top: 0; right: 0; bottom: 0; left: 0;
+            background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.05), transparent);
+            pointer-events: none;
+        }
+
+        .acc-info h2 {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .acc-number {
+            font-family: var(--font-mono);
+            color: var(--primary-blue);
+            font-weight: 600;
+            font-size: 15px;
+            margin-top: 4px;
+        }
+
+        .acc-balance {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            color: #ffffff;
+        }
+
+        .banner-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        /* Form Inputs & Tabs */
+        .txn-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px 14px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-family: var(--font-main);
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .tab-btn.active {
+            background: var(--primary-blue);
+            color: #090d16;
+            box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            color: white;
+            font-family: var(--font-main);
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        /* Scenario Preset Buttons */
+        .scenarios-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin: 18px 0 10px 0;
+        }
+
+        .scenario-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .scenario-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-size: 12px;
+            color: #cbd5e1;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .scenario-chip i {
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .scenario-chip:hover {
+            background: rgba(56, 189, 248, 0.15);
+            border-color: var(--primary-blue);
+            color: white;
+        }
+
+        .scenario-chip.danger:hover {
+            background: rgba(239, 68, 68, 0.15);
+            border-color: var(--danger-red);
+        }
+
+        .scenario-chip.warning:hover {
+            background: rgba(245, 158, 11, 0.15);
+            border-color: var(--warning-amber);
+        }
+
+        /* Action Buttons */
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-family: var(--font-main);
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.25s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #0284c7, #06b6d4);
+            color: white;
+            box-shadow: 0 4px 20px rgba(2, 132, 199, 0.35);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(2, 132, 199, 0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            color: white;
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: var(--primary-blue);
+        }
+
+        /* Fraud Engine Indicator & Gauge */
+        .risk-gauge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            position: relative;
+        }
+
+        .gauge-meter {
+            width: 180px;
+            height: 90px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .gauge-bg {
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 270deg,
+                #10b981 0deg 60deg,
+                #f59e0b 60deg 120deg,
+                #ef4444 120deg 180deg
+            );
+            mask: radial-gradient(circle at 50% 50%, transparent 62px, black 63px);
+            -webkit-mask: radial-gradient(circle at 50% 50%, transparent 62px, black 63px);
+        }
+
+        .gauge-needle {
+            width: 4px;
+            height: 70px;
+            background: #ffffff;
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform-origin: bottom center;
+            transform: translateX(-50%) rotate(-90deg);
+            transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        }
+
+        .gauge-center-dot {
+            width: 16px;
+            height: 16px;
+            background: #ffffff;
+            border-radius: 50%;
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .risk-score-display {
+            margin-top: 14px;
+            text-align: center;
+        }
+
+        .score-val {
+            font-size: 38px;
+            font-weight: 800;
+            font-family: var(--font-mono);
+            line-height: 1;
+        }
+
+        .score-label {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 4px;
+        }
+
+        /* Fraud Breakdown Metrics */
+        .metrics-list {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 10px 14px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .metric-name {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metric-val {
+            font-weight: 700;
+            font-family: var(--font-mono);
+        }
+
+        /* Audit & Result Popup Box */
+        .result-box {
+            margin-top: 16px;
+            padding: 16px;
+            border-radius: 12px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-box.approved {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #6ee7b7;
+        }
+
+        .result-box.blocked {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.35);
+            color: #fca5a5;
+        }
+
+        .result-box.flagged {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.35);
+            color: #fde047;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+
+        /* Transaction History Ledger Table */
+        .ledger-section {
+            grid-column: 1 / -1;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .ledger-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .ledger-table th {
+            padding: 14px 16px;
+            color: var(--text-muted);
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+            letter-spacing: 0.8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .ledger-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            font-family: var(--font-main);
+        }
+
+        .ledger-table tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        /* Modal styling */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(8px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #0f172a;
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            width: 90%;
+            max-width: 550px;
+            padding: 28px;
+            position: relative;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header>
+        <div class="logo-container">
+            <div class="logo-icon">
+                <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div class="logo-text">
+                <h1>ZeroFraud360</h1>
+                <span>Banking Simulator & Fraud Engine</span>
+            </div>
+        </div>
+
+        <div class="header-status">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span>AI Shield: ACTIVE</span>
+            </div>
+            <button class="btn-outline" onclick="resetSimulator()">
+                <i class="fa-solid fa-rotate-right"></i> Reset Account
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <div class="main-container">
+
+        <!-- Account Balance Header -->
+        <div class="account-banner">
+            <div class="acc-info">
+                <h2>Savings Account</h2>
+                <div class="acc-balance" id="accountBalance">₹2,45,800.00</div>
+                <div class="acc-number">ACC: 4098-8821-9923-01 | IFSC: ZERO000360</div>
+            </div>
+            <div class="banner-actions">
+                <button class="btn-outline" id="freezeBtn" onclick="toggleFreezeAccount()">
+                    <i class="fa-solid fa-lock"></i> Freeze Account
+                </button>
+            </div>
+        </div>
+
+        <!-- Left Column: Transaction Input Panel -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-paper-plane"></i> Make a Transaction
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted)">Interactive Testbed</span>
+            </div>
+
+            <!-- Transaction Type Tabs -->
+            <div class="txn-tabs">
+                <button class="tab-btn active" onclick="selectTab('transfer', this)">
+                    <i class="fa-solid fa-money-bill-transfer"></i> Bank Transfer
+                </button>
+                <button class="tab-btn" onclick="selectTab('card', this)">
+                    <i class="fa-solid fa-credit-card"></i> Card Swipe
+                </button>
+                <button class="tab-btn" onclick="selectTab('atm', this)">
+                    <i class="fa-solid fa-vault"></i> ATM Cash
+                </button>
+            </div>
+
+            <!-- Form -->
+            <form id="txnForm" onsubmit="handleTransactionSubmit(event)">
+                <div class="form-group">
+                    <label class="form-label" id="recipientLabel">Recipient Account / UPI ID</label>
+                    <input type="text" id="recipient" class="form-control" placeholder="e.g. 9876543210@paytm or ACC88921" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Amount (₹)</label>
+                        <input type="number" id="amount" class="form-control" placeholder="5000" min="1" step="any" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Location / IP Region</label>
+                        <select id="location" class="form-control">
+                            <option value="Home City (Chennai, IN)">Home City (Chennai, IN)</option>
+                            <option value="New Delhi, IN">New Delhi, IN</option>
+                            <option value="Lagos, NG (Unknown IP)">Lagos, NG (Unknown IP)</option>
+                            <option value="Bucharest, RO (VPN Proxy)">Bucharest, RO (VPN Proxy)</option>
+                            <option value="Unknown Tor Exit Node">Unknown Tor Exit Node</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Device Fingerprint</label>
+                        <select id="device" class="form-control">
+                            <option value="Primary iPhone 14 Pro (Known)">Primary iPhone 14 Pro (Known)</option>
+                            <option value="MacBook Pro Air (Known)">MacBook Pro Air (Known)</option>
+                            <option value="Unregistered Android Emulator">Unregistered Android Emulator</option>
+                            <option value="Automated Selenium Bot Script">Automated Selenium Bot Script</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Time of Transaction</label>
+                        <select id="timeOfDay" class="form-control">
+                            <option value="Daytime (14:30)">Daytime (14:30)</option>
+                            <option value="Late Night (03:15 AM)">Late Night (03:15 AM)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Scenario Injectors -->
+                <div class="scenarios-title">Quick Test Scenarios (1-Click Fraud Simulation)</div>
+                <div class="scenario-grid">
+                    <div class="scenario-chip" onclick="injectScenario('safe')">
+                        <i class="fa-solid fa-circle-check" style="color: var(--success-green)"></i>
+                        Normal Rent Transfer
+                    </div>
+                    <div class="scenario-chip warning" onclick="injectScenario('high_val')">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning-amber)"></i>
+                        High Amount Night Txn
+                    </div>
+                    <div class="scenario-chip danger" onclick="injectScenario('phishing')">
+                        <i class="fa-solid fa-skull-crossbones" style="color: var(--danger-red)"></i>
+                        Foreign VPN Phishing
+                    </div>
+                    <div class="scenario-chip danger" onclick="injectScenario('bot')">
+                        <i class="fa-solid fa-robot" style="color: var(--danger-red)"></i>
+                        Bot Velocity Attack
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary" id="submitBtn">
+                    <i class="fa-solid fa-shield-virus"></i> Execute & Analyze with ZeroFraud360
+                </button>
+            </form>
+        </div>
+
+        <!-- Right Column: Real-Time Fraud Engine Analytics -->
+        <div class="glass-card">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-microchip"></i> AI Risk Scoring Engine
+                </div>
+                <span class="badge badge-success" id="engineStatusBadge">STANDBY</span>
+            </div>
+
+            <!-- Risk Meter Gauge -->
+            <div class="risk-gauge-container">
+                <div class="gauge-meter">
+                    <div class="gauge-bg"></div>
+                    <div class="gauge-needle" id="gaugeNeedle"></div>
+                    <div class="gauge-center-dot"></div>
+                </div>
+                <div class="risk-score-display">
+                    <div class="score-val" id="riskScoreVal" style="color: var(--success-green)">0.0%</div>
+                    <div class="score-label" id="riskScoreLabel" style="color: var(--success-green)">LOW RISK</div>
+                </div>
+            </div>
+
+            <!-- AI Breakdown Metrics -->
+            <div class="metrics-list">
+                <div class="metric-item">
+                    <span class="metric-name"><i class="fa-solid fa-globe"></i> Location & IP Anomaly</span>
+                    <span class="metric-val" id="metricIp">Normal (0%)</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-name"><i class="fa-solid fa-mobile-screen"></i> Device & Behavior Biometrics</span>
+                    <span class="metric-val" id="metricDevice">Trusted (0%)</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-name"><i class="fa-solid fa-gauge-high"></i> Velocity & Amount Anomaly</span>
+                    <span class="metric-val" id="metricVelocity">Standard (0%)</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-name"><i class="fa-solid fa-user-shield"></i> Recipient Trust Index</span>
+                    <span class="metric-val" id="metricRecipient">Verified Clean</span>
+                </div>
+            </div>
+
+            <!-- Audit Result Banner -->
+            <div class="result-box approved" id="resultBox">
+                <div class="result-header" id="resultTitle">
+                    <i class="fa-solid fa-circle-check"></i> Transaction Approved
+                </div>
+                <div id="resultDesc">No suspicious activity detected. Funds safely routed.</div>
+            </div>
+        </div>
+
+        <!-- Ledger Table Section -->
+        <div class="glass-card ledger-section">
+            <div class="card-header">
+                <div class="card-title">
+                    <i class="fa-solid fa-list-check"></i> ZeroFraud360 Live Transaction Ledger
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted)">Real-time Audit Trail</span>
+            </div>
+
+            <div class="table-responsive">
+                <table class="ledger-table">
+                    <thead>
+                        <tr>
+                            <th>Timestamp</th>
+                            <th>Txn ID</th>
+                            <th>Recipient</th>
+                            <th>Amount</th>
+                            <th>Location / Device</th>
+                            <th>Risk Score</th>
+                            <th>AI Verdict</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ledgerBody">
+                        <!-- Default sample row -->
+                        <tr>
+                            <td>Today, 10:14 AM</td>
+                            <td><span style="font-family: var(--font-mono)">TXN992817</span></td>
+                            <td>Grocery Store UPI</td>
+                            <td>₹1,250.00</td>
+                            <td>Chennai, IN (iPhone)</td>
+                            <td><strong style="color: var(--success-green)">2.4%</strong></td>
+                            <td><span class="badge badge-success"><i class="fa-solid fa-check"></i> Approved</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Fraud Details Modal -->
+    <div class="modal-overlay" id="auditModal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="margin-bottom: 12px; font-size: 18px; color: var(--danger-red)" id="modalTitle">
+                <i class="fa-solid fa-triangle-exclamation"></i> Security Interception Audit
+            </h3>
+            <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 18px;" id="modalBody">
+                ZeroFraud360 neural network intercepted this transaction due to anomaly threshold breach.
+            </p>
+            <div class="metrics-list" id="modalMetrics"></div>
+            <button class="btn btn-primary" style="margin-top: 20px" onclick="closeModal()">Acknowledge</button>
+        </div>
+    </div>
+
+    <script>
+        // State variables
+        let balance = 245800.00;
+        let isFrozen = false;
+        let activeTab = 'transfer';
+        let transactionCount = 1000;
+
+        function updateBalanceDisplay() {
+            document.getElementById('accountBalance').innerText = '₹' + balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function toggleFreezeAccount() {
+            isFrozen = !isFrozen;
+            const btn = document.getElementById('freezeBtn');
+            if (isFrozen) {
+                btn.innerHTML = '<i class="fa-solid fa-unlock"></i> Unfreeze Account';
+                btn.style.background = 'rgba(239, 68, 68, 0.2)';
+                btn.style.borderColor = 'var(--danger-red)';
+                alert('🚨 Account Frozen! All outgoing transactions will be blocked by ZeroFraud360.');
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-lock"></i> Freeze Account';
+                btn.style.background = 'transparent';
+                btn.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            }
+        }
+
+        function resetSimulator() {
+            balance = 245800.00;
+            isFrozen = false;
+            updateBalanceDisplay();
+            setGaugeScore(0);
+            document.getElementById('resultBox').style.display = 'none';
+            document.getElementById('ledgerBody').innerHTML = `
+                <tr>
+                    <td>Today, 10:14 AM</td>
+                    <td><span style="font-family: var(--font-mono)">TXN992817</span></td>
+                    <td>Grocery Store UPI</td>
+                    <td>₹1,250.00</td>
+                    <td>Chennai, IN (iPhone)</td>
+                    <td><strong style="color: var(--success-green)">2.4%</strong></td>
+                    <td><span class="badge badge-success"><i class="fa-solid fa-check"></i> Approved</span></td>
+                </tr>
+            `;
+            alert('Banking Simulator reset to initial state.');
+        }
+
+        function selectTab(tab, element) {
+            activeTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+
+            const label = document.getElementById('recipientLabel');
+            if (tab === 'transfer') label.innerText = 'Recipient Account / UPI ID';
+            else if (tab === 'card') label.innerText = 'E-Commerce Merchant / POS Terminal';
+            else if (tab === 'atm') label.innerText = 'ATM Machine ID / Kiosk Location';
+        }
+
+        function injectScenario(scenario) {
+            if (scenario === 'safe') {
+                document.getElementById('recipient').value = 'Landlord Rent (ACC 998231)';
+                document.getElementById('amount').value = '15000';
+                document.getElementById('location').value = 'Home City (Chennai, IN)';
+                document.getElementById('device').value = 'Primary iPhone 14 Pro (Known)';
+                document.getElementById('timeOfDay').value = 'Daytime (14:30)';
+            } else if (scenario === 'high_val') {
+                document.getElementById('recipient').value = 'Unknown Crypto Wallet 0x9f3...';
+                document.getElementById('amount').value = '180000';
+                document.getElementById('location').value = 'New Delhi, IN';
+                document.getElementById('device').value = 'Primary iPhone 14 Pro (Known)';
+                document.getElementById('timeOfDay').value = 'Late Night (03:15 AM)';
+            } else if (scenario === 'phishing') {
+                document.getElementById('recipient').value = 'Mule Account (ACC 110293)';
+                document.getElementById('amount').value = '75000';
+                document.getElementById('location').value = 'Lagos, NG (Unknown IP)';
+                document.getElementById('device').value = 'Unregistered Android Emulator';
+                document.getElementById('timeOfDay').value = 'Late Night (03:15 AM)';
+            } else if (scenario === 'bot') {
+                document.getElementById('recipient').value = 'Rapid Micro-Transfer Target';
+                document.getElementById('amount').value = '4999';
+                document.getElementById('location').value = 'Bucharest, RO (VPN Proxy)';
+                document.getElementById('device').value = 'Automated Selenium Bot Script';
+                document.getElementById('timeOfDay').value = 'Late Night (03:15 AM)';
+            }
+        }
+
+        function calculateRisk(amount, location, device, timeOfDay, recipient) {
+            let score = 5.0; // Base baseline risk
+            let ipRisk = 0;
+            let deviceRisk = 0;
+            let velocityRisk = 0;
+            let recipientRisk = 0;
+
+            // Location check
+            if (location.includes('Lagos') || location.includes('Tor')) {
+                ipRisk += 45;
+            } else if (location.includes('VPN') || location.includes('Bucharest')) {
+                ipRisk += 30;
+            } else if (location.includes('New Delhi')) {
+                ipRisk += 10;
+            }
+
+            // Device check
+            if (device.includes('Bot')) {
+                deviceRisk += 50;
+            } else if (device.includes('Emulator')) {
+                deviceRisk += 35;
+            }
+
+            // Amount & Time
+            if (amount > 100000) {
+                velocityRisk += 25;
+            } else if (amount > 50000) {
+                velocityRisk += 15;
+            }
+
+            if (timeOfDay.includes('Late Night')) {
+                velocityRisk += 10;
+            }
+
+            // Recipient check
+            if (recipient.toLowerCase().includes('mule') || recipient.toLowerCase().includes('crypto')) {
+                recipientRisk += 25;
+            }
+
+            score += ipRisk + deviceRisk + velocityRisk + recipientRisk;
+            if (score > 99.9) score = 99.9;
+
+            return {
+                totalScore: Math.min(100, Math.max(1, score)),
+                ipRisk,
+                deviceRisk,
+                velocityRisk,
+                recipientRisk
+            };
+        }
+
+        function setGaugeScore(score) {
+            const needle = document.getElementById('gaugeNeedle');
+            // Angle range: -90deg (0%) to +90deg (100%)
+            const angle = -90 + (score / 100) * 180;
+            needle.style.transform = `translateX(-50%) rotate(${angle}deg)`;
+
+            const valText = document.getElementById('riskScoreVal');
+            const labelText = document.getElementById('riskScoreLabel');
+            valText.innerText = score.toFixed(1) + '%';
+
+            if (score < 25) {
+                valText.style.color = 'var(--success-green)';
+                labelText.style.color = 'var(--success-green)';
+                labelText.innerText = 'LOW RISK';
+            } else if (score < 65) {
+                valText.style.color = 'var(--warning-amber)';
+                labelText.style.color = 'var(--warning-amber)';
+                labelText.innerText = 'MODERATE RISK';
+            } else {
+                valText.style.color = 'var(--danger-red)';
+                labelText.style.color = 'var(--danger-red)';
+                labelText.innerText = 'CRITICAL FRAUD RISK';
+            }
+        }
+
+        function handleTransactionSubmit(e) {
+            e.preventDefault();
+
+            if (isFrozen) {
+                alert('🚨 TRANSACTION DENIED: Your account is currently frozen by ZeroFraud360 Security.');
+                return;
+            }
+
+            const recipient = document.getElementById('recipient').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+            const location = document.getElementById('location').value;
+            const device = document.getElementById('device').value;
+            const timeOfDay = document.getElementById('timeOfDay').value;
+
+            if (amount > balance) {
+                alert('⚠️ Insufficient Balance for this transaction.');
+                return;
+            }
+
+            // Animate Engine
+            document.getElementById('engineStatusBadge').className = 'badge badge-warning';
+            document.getElementById('engineStatusBadge').innerText = 'ANALYZING...';
+
+            setTimeout(() => {
+                const risk = calculateRisk(amount, location, device, timeOfDay, recipient);
+                setGaugeScore(risk.totalScore);
+
+                // Update Metric Labels
+                document.getElementById('metricIp').innerText = risk.ipRisk > 20 ? `HIGH ANOMALY (${risk.ipRisk}%)` : `Normal (${risk.ipRisk}%)`;
+                document.getElementById('metricDevice').innerText = risk.deviceRisk > 20 ? `SUSPICIOUS (${risk.deviceRisk}%)` : `Trusted (${risk.deviceRisk}%)`;
+                document.getElementById('metricVelocity').innerText = risk.velocityRisk > 15 ? `ELEVATED (${risk.velocityRisk}%)` : `Standard (${risk.velocityRisk}%)`;
+                document.getElementById('metricRecipient').innerText = risk.recipientRisk > 15 ? 'Flagged Pattern' : 'Verified';
+
+                const resultBox = document.getElementById('resultBox');
+                const resultTitle = document.getElementById('resultTitle');
+                const resultDesc = document.getElementById('resultDesc');
+                resultBox.style.display = 'block';
+
+                let verdict = 'Approved';
+                let badgeClass = 'badge-success';
+
+                if (risk.totalScore >= 65) {
+                    verdict = 'Blocked';
+                    badgeClass = 'badge-danger';
+
+                    resultBox.className = 'result-box blocked';
+                    resultTitle.innerHTML = '<i class="fa-solid fa-shield-xmark"></i> Transaction Blocked by ZeroFraud360';
+                    resultDesc.innerText = `High fraud risk score (${risk.totalScore.toFixed(1)}%). Money was NOT deducted. Threat intercepted automatically.`;
+                    
+                    document.getElementById('engineStatusBadge').className = 'badge badge-danger';
+                    document.getElementById('engineStatusBadge').innerText = 'INTERCEPTED';
+
+                    showAuditModal(recipient, amount, risk);
+                } else if (risk.totalScore >= 35) {
+                    verdict = '2FA Challenge';
+                    badgeClass = 'badge-warning';
+
+                    resultBox.className = 'result-box flagged';
+                    resultTitle.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Step-Up OTP Verification Required';
+                    resultDesc.innerText = `Moderate anomaly detected (${risk.totalScore.toFixed(1)}%). Security OTP sent to registered Mobile.`;
+                    
+                    document.getElementById('engineStatusBadge').className = 'badge badge-warning';
+                    document.getElementById('engineStatusBadge').innerText = 'OTP PENDING';
+                } else {
+                    balance -= amount;
+                    updateBalanceDisplay();
+
+                    resultBox.className = 'result-box approved';
+                    resultTitle.innerHTML = '<i class="fa-solid fa-circle-check"></i> Transaction Approved';
+                    resultDesc.innerText = `Clean behavioral signature. ₹${amount.toLocaleString()} transferred to ${recipient}.`;
+
+                    document.getElementById('engineStatusBadge').className = 'badge badge-success';
+                    document.getElementById('engineStatusBadge').innerText = 'CLEARED';
+                }
+
+                // Add to ledger table
+                transactionCount++;
+                const txnId = 'TXN' + transactionCount;
+                const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                const newRow = document.createElement('tr');
+                newRow.innerHTML = `
+                    <td>Today, ${now}</td>
+                    <td><span style="font-family: var(--font-mono)">${txnId}</span></td>
+                    <td>${recipient}</td>
+                    <td>₹${amount.toLocaleString()}</td>
+                    <td>${location.split(' ')[0]} (${device.split(' ')[0]})</td>
+                    <td><strong style="color: ${risk.totalScore > 60 ? 'var(--danger-red)' : risk.totalScore > 30 ? 'var(--warning-amber)' : 'var(--success-green)'}">${risk.totalScore.toFixed(1)}%</strong></td>
+                    <td><span class="badge ${badgeClass}">${verdict}</span></td>
+                `;
+                document.getElementById('ledgerBody').prepend(newRow);
+
+            }, 400);
+        }
+
+        function showAuditModal(recipient, amount, risk) {
+            const modal = document.getElementById('auditModal');
+            document.getElementById('modalTitle').innerText = '🚨 ZeroFraud360 Security Interception';
+            document.getElementById('modalBody').innerText = `Automated threat prevention blocked transaction of ₹${amount.toLocaleString()} to ${recipient}. Risk Score: ${risk.totalScore.toFixed(1)}%.`;
+            
+            document.getElementById('modalMetrics').innerHTML = `
+                <div class="metric-item"><span class="metric-name">IP Origin / Location Risk</span><span class="metric-val" style="color:var(--danger-red)">+${risk.ipRisk}%</span></div>
+                <div class="metric-item"><span class="metric-name">Device Fingerprint Risk</span><span class="metric-val" style="color:var(--danger-red)">+${risk.deviceRisk}%</span></div>
+                <div class="metric-item"><span class="metric-name">Velocity & Time Risk</span><span class="metric-val" style="color:var(--warning-amber)">+${risk.velocityRisk}%</span></div>
+                <div class="metric-item"><span class="metric-name">Target Wallet Risk</span><span class="metric-val" style="color:var(--danger-red)">+${risk.recipientRisk}%</span></div>
+            `;
+
+            modal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('auditModal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
