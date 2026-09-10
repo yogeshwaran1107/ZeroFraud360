@@ -22,8 +22,12 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8")
 
-from docx_extractor import extract_withdrawal_methods
-from predict import score_transaction
+try:
+    from .docx_extractor import extract_withdrawal_methods
+    from .predict import score_transaction
+except (ImportError, ValueError):
+    from docx_extractor import extract_withdrawal_methods
+    from predict import score_transaction
 
 
 def generate_n_test_cases(n: int, fraud_ratio: float = 0.05, seed: int = 42) -> list[dict[str, Any]]:

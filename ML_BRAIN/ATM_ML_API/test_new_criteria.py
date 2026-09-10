@@ -7,7 +7,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8")
 
-from predict import score_transaction
+try:
+    from .predict import score_transaction
+except (ImportError, ValueError):
+    from predict import score_transaction
 
 print("=" * 85)
 print("     EVALUATING MODEL 2: ATM_ML_API (ATM & Cash Withdrawal Fraud Model)          ")

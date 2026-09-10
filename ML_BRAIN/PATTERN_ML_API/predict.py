@@ -20,7 +20,10 @@ from typing import Any
 import lightgbm as lgb
 import numpy as np
 
-from pattern_matcher import match_fraud_pattern
+try:
+    from .pattern_matcher import match_fraud_pattern
+except (ImportError, ValueError):
+    from pattern_matcher import match_fraud_pattern
 
 logging.basicConfig(
     level=logging.INFO,
