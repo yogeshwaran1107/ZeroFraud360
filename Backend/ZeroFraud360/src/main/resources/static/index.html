@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZeroFraud360 — Law Enforcement & Financial Monitoring Portal</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+            --accent-blue: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --success: #10b981;
+            --badge-police: #3b82f6;
+            --badge-cyber: #8b5cf6;
+            --badge-bank: #10b981;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Top Navbar */
+        header {
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #ef4444, #3b82f6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .brand-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-left: 0.5rem;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .badge {
+            padding: 0.25rem 0.6rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge-police { background-color: rgba(59, 130, 246, 0.2); color: var(--accent-blue); border: 1px solid var(--accent-blue); }
+        .badge-cyber { background-color: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid #8b5cf6; }
+        .badge-bank { background-color: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+        .badge-hold { background-color: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+        .badge-resolved { background-color: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+
+        .btn {
+            background-color: var(--accent-blue);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover { background-color: var(--accent-hover); }
+        .btn-outline { background: transparent; border: 1px solid var(--border-color); color: var(--text-muted); }
+        .btn-outline:hover { background: var(--bg-card); color: var(--text-primary); }
+        .btn-danger { background-color: var(--danger); }
+        .btn-danger:hover { background-color: #dc2626; }
+        .btn-sm { padding: 0.25rem 0.5rem; font-size: 0.75rem; }
+
+        /* Login Container */
+        .login-wrapper {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .login-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-card h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        .login-card p {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.65rem 0.85rem;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+
+        .quick-fill-group {
+            margin-top: 1.5rem;
+            padding-top: 1.25rem;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .quick-fill-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+            text-align: center;
+            letter-spacing: 0.05em;
+        }
+
+        .quick-fill-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+        }
+
+        .alert-box {
+            padding: 0.75rem 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+
+        .alert-error {
+            background-color: rgba(239, 68, 68, 0.15);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+        }
+
+        /* Dashboard Container */
+        .dashboard-container {
+            flex: 1;
+            padding: 2rem;
+            max-width: 1300px;
+            margin: 0 auto;
+            width: 100%;
+            display: none;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1.25rem;
+        }
+
+        .stat-title {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+        }
+
+        .table-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .table-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.875rem;
+        }
+
+        th, td {
+            padding: 0.85rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: rgba(15, 23, 42, 0.6);
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        .empty-state {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 480px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <div class="brand-icon">360</div>
+            <div>
+                <span class="brand-title">ZeroFraud360</span>
+                <span class="brand-sub">Real-Time Law Enforcement Portal</span>
+            </div>
+        </div>
+        <div id="authHeaderNav" class="user-info" style="display: none;">
+            <span>Logged in as: <strong id="headerUsername">Police</strong></span>
+            <span id="headerRoleBadge" class="badge badge-police">POLICE</span>
+            <button class="btn btn-outline btn-sm" onclick="logout()">Logout</button>
+        </div>
+    </header>
+
+    <!-- Login View -->
+    <div id="loginView" class="login-wrapper">
+        <div class="login-card">
+            <h2>Officer Portal Login</h2>
+            <p>Authorized access for Police, Cyber Cell, and Bank Officers</p>
+
+            <div id="loginAlert" class="alert-box alert-error"></div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="usernameInput">Username</label>
+                    <input type="text" id="usernameInput" class="form-control" required placeholder="Enter username">
+                </div>
+                <div class="form-group">
+                    <label for="passwordInput">Password</label>
+                    <input type="password" id="passwordInput" class="form-control" required placeholder="Enter password">
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Sign In with Security</button>
+            </form>
+
+            <div class="quick-fill-group">
+                <div class="quick-fill-title">Demo Quick-Fill Profiles</div>
+                <div class="quick-fill-buttons">
+                    <button class="btn btn-outline btn-sm" onclick="quickFill('police', 'Police@12345')">👮 Police</button>
+                    <button class="btn btn-outline btn-sm" onclick="quickFill('cyber', 'Cyber@12345')">💻 Cyber</button>
+                    <button class="btn btn-outline btn-sm" onclick="quickFill('bank', 'Bank@12345')">🏦 Bank</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Authenticated Dashboard View -->
+    <div id="dashboardView" class="dashboard-container">
+        <div class="dashboard-header">
+            <div>
+                <h2>Live Money-Flow Fraud Monitor</h2>
+                <p style="color: var(--text-muted); font-size: 0.875rem;">Detects A &rarr; B &rarr; C rapid pass-through within &le; 180s and commands financial holds.</p>
+            </div>
+            <div>
+                <button class="btn btn-outline" onclick="loadAlerts()">🔄 Refresh Alerts</button>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">Active Holds</div>
+                <div id="statActiveHolds" class="stat-value" style="color: var(--danger);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Resolved Alerts</div>
+                <div id="statResolvedAlerts" class="stat-value" style="color: var(--success);">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">Total Intercepted Fraud</div>
+                <div id="statTotalAmount" class="stat-value">&#8377;0.00</div>
+            </div>
+        </div>
+
+        <div class="table-card">
+            <div class="table-header">
+                <h3>Real-Time Fraud Alerts</h3>
+                <span id="alertsCount" class="badge badge-police">0 Alerts</span>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Alert ID</th>
+                        <th>Pattern Type</th>
+                        <th>Flow Chain (A &rarr; B &rarr; C)</th>
+                        <th>Held Amount</th>
+                        <th>Decision</th>
+                        <th>Status</th>
+                        <th>Hold ID</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTableBody">
+                    <tr>
+                        <td colspan="8" class="empty-state">No fraud alerts detected yet.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Release Hold Modal -->
+    <div id="releaseModal" class="modal-overlay">
+        <div class="modal-content">
+            <h3>Release Financial Hold</h3>
+            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem; margin-bottom: 1rem;">
+                Authorized action by officer. IndianBankSimulation will release the held balance back to Account C.
+            </p>
+            <form id="releaseForm" onsubmit="handleReleaseSubmit(event)">
+                <input type="hidden" id="releaseHoldId">
+                <div class="form-group">
+                    <label>Hold Reference ID</label>
+                    <input type="text" id="displayHoldId" class="form-control" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="releaseReason">Investigation Clearance Reason</label>
+                    <textarea id="releaseReason" class="form-control" rows="3" required placeholder="e.g. Investigation complete, legitimate commercial transaction verified."></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeReleaseModal()">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Confirm Release</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        function quickFill(user, pass) {
+            document.getElementById('usernameInput').value = user;
+            document.getElementById('passwordInput').value = pass;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('usernameInput').value.trim();
+            const password = document.getElementById('passwordInput').value;
+            const alertBox = document.getElementById('loginAlert');
+            alertBox.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                if (!res.ok) {
+                    alertBox.innerText = data.message || 'Login failed. Please check credentials.';
+                    alertBox.style.display = 'block';
+                    return;
+                }
+
+                // Save token and profile in sessionStorage
+                sessionStorage.setItem('zeroFraudToken', data.accessToken);
+                sessionStorage.setItem('zeroFraudUser', data.username);
+                sessionStorage.setItem('zeroFraudRole', data.role);
+
+                showDashboard();
+            } catch (err) {
+                alertBox.innerText = 'Unable to reach authentication service.';
+                alertBox.style.display = 'block';
+            }
+        }
+
+        function showDashboard() {
+            const token = sessionStorage.getItem('zeroFraudToken');
+            const username = sessionStorage.getItem('zeroFraudUser');
+            const role = sessionStorage.getItem('zeroFraudRole');
+
+            if (!token) {
+                document.getElementById('loginView').style.display = 'flex';
+                document.getElementById('dashboardView').style.display = 'none';
+                document.getElementById('authHeaderNav').style.display = 'none';
+                return;
+            }
+
+            document.getElementById('loginView').style.display = 'none';
+            document.getElementById('dashboardView').style.display = 'block';
+            document.getElementById('authHeaderNav').style.display = 'flex';
+
+            document.getElementById('headerUsername').innerText = username;
+            const badge = document.getElementById('headerRoleBadge');
+            badge.innerText = role.replace('ROLE_', '');
+            badge.className = `badge ${role === 'ROLE_POLICE' ? 'badge-police' : role === 'ROLE_CYBER' ? 'badge-cyber' : 'badge-bank'}`;
+
+            loadAlerts();
+        }
+
+        async function loadAlerts() {
+            const token = sessionStorage.getItem('zeroFraudToken');
+            if (!token) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/api/fraud/alerts`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (res.status === 401 || res.status === 403) {
+                    logout();
+                    return;
+                }
+
+                const alerts = await res.json();
+                renderAlerts(alerts);
+            } catch (err) {
+                console.error('Failed to load alerts:', err);
+            }
+        }
+
+        function renderAlerts(alerts) {
+            const tbody = document.getElementById('alertsTableBody');
+            document.getElementById('alertsCount').innerText = `${alerts.length} Alerts`;
+
+            let activeCount = 0;
+            let resolvedCount = 0;
+            let totalAmount = 0;
+
+            if (!alerts || alerts.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty-state">No fraud alerts recorded yet.</td></tr>';
+                document.getElementById('statActiveHolds').innerText = '0';
+                document.getElementById('statResolvedAlerts').innerText = '0';
+                document.getElementById('statTotalAmount').innerHTML = '&#8377;0.00';
+                return;
+            }
+
+            tbody.innerHTML = '';
+            alerts.forEach(a => {
+                if (a.status === 'HOLD_ACTIVE') activeCount++;
+                if (a.status === 'RESOLVED') resolvedCount++;
+                if (a.secondAmount) totalAmount += parseFloat(a.secondAmount);
+
+                const statusClass = a.status === 'HOLD_ACTIVE' ? 'badge-hold' : 'badge-resolved';
+                const actionBtn = a.status === 'HOLD_ACTIVE' 
+                    ? `<button class="btn btn-danger btn-sm" onclick="openReleaseModal('${a.alertId}')">Release Hold</button>`
+                    : `<span style="color: var(--text-muted); font-size: 0.8rem;">Cleared</span>`;
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${a.alertId}</strong></td>
+                    <td>${a.patternType}</td>
+                    <td><code>${a.sourceAccountId}</code> &rarr; <code>${a.intermediateAccountId}</code> &rarr; <code>${a.destinationAccountId}</code></td>
+                    <td><strong>&#8377;${parseFloat(a.secondAmount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong></td>
+                    <td><span class="badge ${a.decision === 'STOP' ? 'badge-hold' : 'badge-resolved'}">${a.decision}</span></td>
+                    <td><span class="badge ${statusClass}">${a.status}</span></td>
+                    <td><small style="color: var(--text-muted);">${a.bankHoldId || 'N/A'}</small></td>
+                    <td>${actionBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('statActiveHolds').innerText = activeCount;
+            document.getElementById('statResolvedAlerts').innerText = resolvedCount;
+            document.getElementById('statTotalAmount').innerHTML = `&#8377;${totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`;
+        }
+
+        function openReleaseModal(alertId) {
+            document.getElementById('releaseHoldId').value = alertId;
+            document.getElementById('displayHoldId').value = alertId;
+            document.getElementById('releaseReason').value = '';
+            document.getElementById('releaseModal').style.display = 'flex';
+        }
+
+        function closeReleaseModal() {
+            document.getElementById('releaseModal').style.display = 'none';
+        }
+
+        async function handleReleaseSubmit(e) {
+            e.preventDefault();
+            const alertId = document.getElementById('releaseHoldId').value;
+            const reason = document.getElementById('releaseReason').value;
+            const token = sessionStorage.getItem('zeroFraudToken');
+            const officerId = sessionStorage.getItem('zeroFraudUser');
+
+            try {
+                const res = await fetch(`${API_BASE}/api/officer/holds/${alertId}/release`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ officerId, reason })
+                });
+
+                if (res.ok) {
+                    closeReleaseModal();
+                    loadAlerts();
+                } else {
+                    const err = await res.json();
+                    alert('Release failed: ' + (err.message || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Network error during release request.');
+            }
+        }
+
+        async function logout() {
+            const token = sessionStorage.getItem('zeroFraudToken');
+            if (token) {
+                try {
+                    await fetch(`${API_BASE}/api/auth/logout`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                } catch (e) {}
+            }
+
+            sessionStorage.clear();
+            showDashboard();
+        }
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            showDashboard();
+        });
+    </script>
+</body>
+</html>
