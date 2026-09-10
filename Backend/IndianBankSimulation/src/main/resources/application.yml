@@ -35,7 +35,7 @@ logging:
 
 bank:
   security:
-    internal-service-token: ${BANK_INTERNAL_SERVICE_TOKEN:sim-secret-token-360}
+    internal-service-token: ${BANK_INTERNAL_SERVICE_TOKEN:${BANK_SIMULATION_SERVICE_TOKEN:sim-secret-token-360}}
   zerofraud360:
     events-url: ${ZERO_FRAUD_EVENTS_URL:http://localhost:8081/internal/v1/events/payment-success}
   holds:
@@ -44,3 +44,7 @@ bank:
     expiration-check-interval-ms: 15000
   outbox:
     publisher-interval-ms: 5000
+
+security:
+  internal-service:
+    expected-token: ${BANK_SIMULATION_SERVICE_TOKEN:${bank.security.internal-service-token:sim-secret-token-360}}

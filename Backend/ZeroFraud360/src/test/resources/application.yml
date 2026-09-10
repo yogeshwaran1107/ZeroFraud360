@@ -39,8 +39,11 @@ bank:
     connect-timeout-ms: 1000
     read-timeout-ms: 2000
 
-app:
+security:
   jwt:
     secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-    expiration-ms: 3600000
+    expiration-seconds: 3600
     issuer: zerofraud360-test
+  login:
+    max-failed-attempts: 5
+    lock-duration-seconds: 300

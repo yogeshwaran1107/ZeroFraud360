@@ -190,7 +190,7 @@ ALLOW
 - **Request Body**:
   ```json
   {
-    "officerId": "OFFICER-42",
+    "officerId": "police",
     "reason": "Customer verified via phone call, transfer is legitimate."
   }
   ```
@@ -199,14 +199,71 @@ ALLOW
   {
     "holdId": "HOLD-ALERT-D683707CA9",
     "status": "RELEASED",
-    "officerId": "OFFICER-42",
+    "officerId": "police",
     "reason": "Customer verified via phone call, transfer is legitimate."
   }
   ```
 
 ---
 
-## 4. How to Run Locally
+## 4. Authentication & Security (Spring Security + JWT)
+
+ZeroFraud360 is protected by Spring Security with stateless HMAC-SHA256 JWT Bearer authentication.
+
+### Predefined User Accounts (Local Simulation Only)
+
+| Username | Role | Password | Description |
+|---|---|---|---|
+| `police` | `ROLE_POLICE` | `Police@12345` | Law enforcement officer |
+| `cyber` | `ROLE_CYBER` | `Cyber@12345` | Cyber crime analyst |
+| `bank` | `ROLE_BANK` | `Bank@12345` | Bank compliance officer |
+
+> [!NOTE]
+> Public registration is permanently disabled. Passwords are encrypted using BCrypt. Accounts lock for 300 seconds after 5 consecutive failed login attempts.
+
+### Authentication Endpoints
+
+#### 1. Login
+- **Endpoint**: `POST /api/auth/login` (Public)
+- **Request**:
+  ```json
+  {
+    "username": "police",
+    "password": "Police@12345"
+  }
+  ```
+- **Response**: `200 OK`
+  ```json
+  {
+    "accessToken": "eyJhbGciOiJIUzI1NiJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 3600,
+    "username": "police",
+    "role": "ROLE_POLICE"
+  }
+  ```
+
+#### 2. Current User Profile
+- **Endpoint**: `GET /api/auth/me` (Protected — requires `Authorization: Bearer <token>`)
+
+#### 3. Logout
+- **Endpoint**: `POST /api/auth/logout` (Protected — requires `Authorization: Bearer <token>`)
+
+---
+
+## 5. Built-in Officer Web Portal
+
+ZeroFraud360 includes a responsive single-page portal:
+- **URL**: `http://localhost:8081/index.html` (or `http://localhost:8081/`)
+- **Features**:
+  - Secure login with quick-fill demo buttons for Police, Cyber, and Bank roles
+  - Real-time fraud alert dashboard with auto-calculated metrics
+  - One-click financial hold release modal with audit logging
+  - Automatic session management and 401 handling
+
+---
+
+## 6. How to Run Locally
 
 ### Prerequisites
 - Java 25
@@ -251,14 +308,24 @@ cd Backend\ZeroFraud360
    }
    ```
 
-3. **Check Fraud Alerts**:
-   ```http
-   GET http://localhost:8081/api/fraud/alerts
-   ```
+3. **Log In to ZeroFraud360 & View Fraud Alerts**:
+   - Web UI: Open `http://localhost:8081/index.html` and sign in with `police` / `Police@12345`
+   - API:
+     ```bash
+     curl -X POST http://localhost:8081/api/auth/login \
+          -H "Content-Type: application/json" \
+          -d '{"username":"police","password":"Police@12345"}'
+     ```
+     Use returned token:
+     ```bash
+     curl -X GET http://localhost:8081/api/fraud/alerts \
+          -H "Authorization: Bearer <ACCESS_TOKEN>"
+     ```
    If the Decision API returned `STOP`, Account C has ₹10,000 placed on `HOLD`!
 
 4. **Verify Account C Balance**:
-   ```http
-   GET http://localhost:8080/api/accounts/3000000001
-   ```
-   Ledger balance = ₹15,000.00, Available balance = ₹5,000.00. Attempting to withdraw or transfer ₹6,000 will be blocked with `INSUFFICIENT_AVAILABLE_FUNDS`.
+   Attempting to withdraw or transfer held funds will be blocked with `INSUFFICIENT_AVAILABLE_FUNDS`.
+
+5. **Release Hold as Officer**:
+   Click "Release Hold" in the web portal or call `POST /api/officer/holds/{holdId}/release` with the Bearer JWT.
+

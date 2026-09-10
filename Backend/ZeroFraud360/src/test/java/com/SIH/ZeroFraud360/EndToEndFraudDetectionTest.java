@@ -53,6 +53,9 @@ class EndToEndFraudDetectionTest {
     private ObjectMapper objectMapper;
 
     @Autowired
+    private com.SIH.ZeroFraud360.auth.security.JwtProvider jwtProvider;
+
+    @Autowired
     private FraudAlertRepository alertRepository;
 
     @Autowired
@@ -85,6 +88,13 @@ class EndToEndFraudDetectionTest {
     @Test
     @DisplayName("End-to-End: A -> B -> C within 60s triggers alert, Decision API STOP commands hold on Account C, Officer releases hold")
     void testEndToEndFraudDetectionAndHoldWorkflow() throws Exception {
+        com.SIH.ZeroFraud360.auth.security.UserPrincipal policePrincipal =
+                new com.SIH.ZeroFraud360.auth.security.UserPrincipal(
+                        1L, "police", "hash", "ROLE_POLICE", true,
+                        java.util.List.of(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_POLICE"))
+                );
+        String policeToken = jwtProvider.generateToken(policePrincipal);
+
         Instant t1Time = Instant.now().minus(Duration.ofSeconds(60));
         Instant t2Time = Instant.now();
 
@@ -158,15 +168,17 @@ class EndToEndFraudDetectionTest {
         assertThat(alert.getFirstAmount()).isEqualByComparingTo("10000.00");
         assertThat(alert.getSecondAmount()).isEqualByComparingTo("10000.00");
 
-        // Step 4: Verify Fraud Query API returns the alert
-        mockMvc.perform(get("/api/fraud/alerts"))
+        // Step 4: Verify Fraud Query API returns the alert with Bearer JWT
+        mockMvc.perform(get("/api/fraud/alerts")
+                        .header("Authorization", "Bearer " + policeToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].alertId").value(alert.getAlertId()))
                 .andExpect(jsonPath("$[0].status").value("HOLD_ACTIVE"))
                 .andExpect(jsonPath("$[0].decision").value("STOP"));
 
-        // Step 5: Officer releases hold via Officer API
+        // Step 5: Officer releases hold via Officer API with Bearer JWT
         mockMvc.perform(post("/api/officer/holds/" + alert.getAlertId() + "/release")
+                        .header("Authorization", "Bearer " + policeToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"officerId\":\"OFFICER-77\",\"reason\":\"Investigation complete: cleared.\"}"))
                 .andExpect(status().isOk())

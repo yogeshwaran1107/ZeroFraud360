@@ -443,6 +443,77 @@ Allows the frontend to inject simulated faults to showcase distributed system re
 
 ---
 
+### 4.7 Internal Financial-Control APIs (ZeroFraud360 Service Authentication)
+
+These internal APIs control account-level financial holds (locks) commanded by the `ZeroFraud360` fraud detection system.
+
+> [!WARNING]
+> **Access Restriction**: Strictly restricted to the trusted service principal `ZERO_FRAUD_360` (`ROLE_TRUSTED_SERVICE`).
+> Calls must include the pre-shared internal service token header:
+> `X-Service-Token: ${BANK_SIMULATION_SERVICE_TOKEN}`
+> Direct browser/frontend calls without this valid service token are rejected with `403 Forbidden` (`ACCESS_DENIED`). Human JWTs are not valid for internal service endpoints.
+
+#### `POST /internal/v1/accounts/{accountId}/holds`
+Places a temporary financial hold on an account to prevent fraudulent cash-out.
+- **Header**: `X-Service-Token: <BANK_SIMULATION_SERVICE_TOKEN>`
+- **Request Body**:
+  ```json
+  {
+    "requestId": "HOLD-ALERT-1001",
+    "transactionId": "TXN-2002",
+    "alertId": "ALERT-1001",
+    "amount": 10000.00,
+    "currency": "INR",
+    "durationMinutes": 10,
+    "reasonCode": "FRAUD_ALERT",
+    "source": "ZERO_FRAUD_360"
+  }
+  ```
+- **Response `201 Created`**:
+  ```json
+  {
+    "holdId": "HOLD-ALERT-1001",
+    "accountId": "3000000001",
+    "amount": 10000.00,
+    "status": "ACTIVE",
+    "expiresAt": "2026-09-10T06:40:00Z"
+  }
+  ```
+
+#### `POST /internal/v1/holds/{holdId}/release`
+Releases an active financial hold, restoring available balance.
+- **Header**: `X-Service-Token: <BANK_SIMULATION_SERVICE_TOKEN>`
+- **Request Body**:
+  ```json
+  {
+    "officerId": "police",
+    "reason": "Investigation complete. Legitimate transaction verified."
+  }
+  ```
+- **Response `200 OK`**:
+  ```json
+  {
+    "holdId": "HOLD-ALERT-1001",
+    "status": "RELEASED",
+    "amount": 10000.00
+  }
+  ```
+
+#### `GET /internal/v1/holds/{holdId}`
+Fetches status and details of a financial hold.
+- **Header**: `X-Service-Token: <BANK_SIMULATION_SERVICE_TOKEN>`
+- **Response `200 OK`**:
+  ```json
+  {
+    "holdId": "HOLD-ALERT-1001",
+    "accountId": "3000000001",
+    "amount": 10000.00,
+    "status": "ACTIVE"
+  }
+  ```
+
+---
+
 ## 5. Frontend Screen & UI Blueprint
 
 To create an intuitive educational UI, structure the frontend into these 5 views:
