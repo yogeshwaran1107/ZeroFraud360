@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: IndianBankSimulation
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/banksim_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: 86400000 # 24 hours
+    issuer: zerofraud360-bank-sim
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.SIH.IndianBankSimulation: INFO
+    org.springframework.security: INFO
+
+bank:
+  security:
+    internal-service-token: ${BANK_INTERNAL_SERVICE_TOKEN:${BANK_SIMULATION_SERVICE_TOKEN:sim-secret-token-360}}
+  zerofraud360:
+    events-url: ${ZERO_FRAUD_EVENTS_URL:http://localhost:8081/internal/v1/events/payment-success}
+  holds:
+    scheduler:
+      enabled: true
+    expiration-check-interval-ms: 15000
+  outbox:
+    publisher-interval-ms: 5000
+
+security:
+  internal-service:
+    expected-token: ${BANK_SIMULATION_SERVICE_TOKEN:${bank.security.internal-service-token:sim-secret-token-360}}

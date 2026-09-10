@@ -1,0 +1,14 @@
+# Environment & secret files
+.env
+*.env
+.env.local
+
+# IDE & OS
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+**/target/
