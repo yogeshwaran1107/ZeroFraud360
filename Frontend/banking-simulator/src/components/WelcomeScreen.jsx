@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { loginUser, SAMPLE_ACCOUNTS } from '../services/api';
+import mapImage from '../assets/Map.jpg';
 import './WelcomeScreen.css';
 
 export default function WelcomeScreen({ onNavigate, onLoginSuccess }) {
@@ -56,37 +57,18 @@ export default function WelcomeScreen({ onNavigate, onLoginSuccess }) {
           <p className="app-subtitle">Multi-Account Real-Time Banking &amp; Fraud Detection</p>
         </div>
 
-        {/* Center Illustration */}
-        <div className="map-illustration-container">
-          <div className="india-map-watermark">
-            <svg viewBox="0 0 300 300" className="india-svg">
-              <path 
-                d="M150 40 Q160 50 180 55 T210 70 T240 95 T260 120 T240 140 T220 150 T200 160 T180 180 T170 210 T160 250 T150 270 T140 250 T130 210 T120 180 T100 160 T80 150 T60 140 T40 120 T60 95 T90 70 T120 55 T140 50 Z" 
-                fill="rgba(255, 255, 255, 0.08)"
-                stroke="rgba(255, 255, 255, 0.15)"
-                strokeWidth="1.5"
-              />
-            </svg>
-          </div>
-
-          <div className="rupee-orbit">
-            <span className="rupee-symbol">₹</span>
-            <svg className="orbit-arrows-svg" viewBox="0 0 160 160">
-              <path 
-                d="M 30 80 A 50 50 0 0 1 130 80" 
-                fill="none" 
-                stroke="rgba(255, 255, 255, 0.4)" 
-                strokeWidth="2" 
-                strokeDasharray="4 4"
-              />
-              <path 
-                d="M 130 80 A 50 50 0 0 1 30 80" 
-                fill="none" 
-                stroke="rgba(255, 255, 255, 0.4)" 
-                strokeWidth="2" 
-              />
-              <polygon points="128,72 138,80 126,86" fill="rgba(255, 255, 255, 0.7)" />
-            </svg>
+        {/* Center Map Image */}
+        <div className="center-map-wrapper">
+          <div className="center-map-card">
+            <img 
+              src={mapImage} 
+              alt="India Inter-Bank Simulation Network Map" 
+              className="center-map-img" 
+            />
+            <div className="map-badge-overlay">
+              <span className="live-dot"></span>
+              <span>All India Inter-Bank Simulated Network</span>
+            </div>
           </div>
         </div>
 

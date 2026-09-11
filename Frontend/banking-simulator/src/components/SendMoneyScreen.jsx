@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getBeneficiaries, SAMPLE_ACCOUNTS, getActiveAccountNumber } from '../services/api';
+import { getBeneficiaries, getAccountDetails, SAMPLE_ACCOUNTS, getActiveAccountNumber } from '../services/api';
 import './SendMoneyScreen.css';
 
 export default function SendMoneyScreen({ onNavigate, transferData, setTransferData }) {
@@ -12,11 +12,16 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
   const [beneficiaries, setBeneficiaries] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
   const [customAccInput, setCustomAccInput] = useState('');
+  const [isFrozen, setIsFrozen] = useState(false);
 
   const activeAccNo = getActiveAccountNumber();
 
   useEffect(() => {
     async function load() {
+      const accRes = await getAccountDetails();
+      if (accRes.success && accRes.account && accRes.account.status === 'FROZEN') {
+        setIsFrozen(true);
+      }
       const res = await getBeneficiaries();
       if (res.success && res.beneficiaries) {
         setBeneficiaries(res.beneficiaries);
@@ -57,6 +62,11 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
 
   const handleContinue = (e) => {
     e.preventDefault();
+    if (isFrozen) {
+      alert('🚨 ACTION BLOCKED: You have been marked as a fraud and the officials are tracking you! All outbound transfers are suspended.');
+      return;
+    }
+
     if (!amount || parseFloat(amount) <= 0) {
       alert('Please enter a valid amount.');
       return;
@@ -93,6 +103,42 @@ export default function SendMoneyScreen({ onNavigate, transferData, setTransferD
         </div>
 
         <div className="send-money-content">
+          {isFrozen && (
+            <div style={{
+              margin: '0 0 18px',
+              padding: '14px 16px',
+              borderRadius: '16px',
+              background: '#fff1f2',
+              border: '2px solid #f43f5e',
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '12px'
+            }}>
+              <div style={{
+                width: '34px',
+                height: '34px',
+                borderRadius: '8px',
+                background: '#ffe4e6',
+                color: '#e11d48',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '16px',
+                flexShrink: 0
+              }}>
+                <i className="fa-solid fa-ban"></i>
+              </div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: '#881337', marginBottom: '2px' }}>
+                  Transfers Suspended
+                </div>
+                <div style={{ fontSize: '11px', color: '#9f1239', lineHeight: '1.4' }}>
+                  You have been marked as a fraud and the officials are tracking you! Outbound payments are restricted.
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="form-section">
             <label className="section-label">Transfer To (Beneficiary)</label>
             <div className="recipient-card">

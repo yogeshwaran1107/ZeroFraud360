@@ -76,4 +76,38 @@ public class BankSimulationHoldClient {
                 .retrieve()
                 .toBodilessEntity();
     }
+
+    public void freezeAccount(String accountId, String reason) {
+        String url = bankSimBaseUrl.replaceAll("/+$", "") + "/internal/v1/accounts/" + accountId + "/freeze";
+        log.warn("Requesting account freeze from IndianBankSimulation at {}: accountId={}, reason={}", url, accountId, reason);
+
+        try {
+            restClient.post()
+                    .uri(url)
+                    .header("X-Service-Token", serviceToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new BankReleaseHoldRequestDto("ZERO_FRAUD_360", reason))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.error("Failed to freeze account {} on BankSimulation: {}", accountId, e.getMessage());
+        }
+    }
+
+    public void unfreezeAccount(String accountId, String reason) {
+        String url = bankSimBaseUrl.replaceAll("/+$", "") + "/internal/v1/accounts/" + accountId + "/unfreeze";
+        log.info("Requesting account unfreeze from IndianBankSimulation at {}: accountId={}, reason={}", url, accountId, reason);
+
+        try {
+            restClient.post()
+                    .uri(url)
+                    .header("X-Service-Token", serviceToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(new BankReleaseHoldRequestDto("ZERO_FRAUD_360", reason))
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (Exception e) {
+            log.warn("Failed to unfreeze account {} on BankSimulation: {}", accountId, e.getMessage());
+        }
+    }
 }

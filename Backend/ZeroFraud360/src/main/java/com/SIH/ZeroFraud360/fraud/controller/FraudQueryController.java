@@ -12,6 +12,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.SIH.ZeroFraud360.fraud.dto.AccountForensicsDto;
+import com.SIH.ZeroFraud360.fraud.dto.QuickAccountDto;
+import com.SIH.ZeroFraud360.fraud.service.AccountForensicsService;
 import java.util.Map;
 import java.util.UUID;
 
@@ -22,13 +25,26 @@ public class FraudQueryController {
     private final FraudAlertRepository alertRepository;
     private final ObservedTransactionRepository transactionRepository;
     private final FraudPatternRepository patternRepository;
+    private final AccountForensicsService forensicsService;
 
     public FraudQueryController(FraudAlertRepository alertRepository,
                                 ObservedTransactionRepository transactionRepository,
-                                FraudPatternRepository patternRepository) {
+                                FraudPatternRepository patternRepository,
+                                AccountForensicsService forensicsService) {
         this.alertRepository = alertRepository;
         this.transactionRepository = transactionRepository;
         this.patternRepository = patternRepository;
+        this.forensicsService = forensicsService;
+    }
+
+    @GetMapping("/accounts/quick-list")
+    public ResponseEntity<List<QuickAccountDto>> getQuickAccounts() {
+        return ResponseEntity.ok(forensicsService.getQuickAccounts());
+    }
+
+    @GetMapping("/accounts/{accountId}/forensics")
+    public ResponseEntity<AccountForensicsDto> getAccountForensics(@PathVariable("accountId") String accountId) {
+        return ResponseEntity.ok(forensicsService.getAccountForensics(accountId));
     }
 
     @GetMapping("/alerts")

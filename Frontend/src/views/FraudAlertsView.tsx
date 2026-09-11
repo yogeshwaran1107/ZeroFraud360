@@ -13,7 +13,7 @@ export const FraudAlertsView: React.FC<FraudAlertsViewProps> = ({
   isLoading,
   onSelectAlert,
 }) => {
-  const [filterStatus, setFilterStatus] = useState<'all' | 'holds' | 'confirmed' | 'cleared'>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | 'holds' | 'medium' | 'confirmed' | 'cleared'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -21,6 +21,7 @@ export const FraudAlertsView: React.FC<FraudAlertsViewProps> = ({
   // Filter alerts
   const filteredAlerts = alerts.filter((a) => {
     if (filterStatus === 'holds' && a.status !== 'HOLD_ACTIVE') return false;
+    if (filterStatus === 'medium' && a.status !== 'MEDIUM_RISK') return false;
     if (filterStatus === 'confirmed' && a.status !== 'CONFIRMED_FRAUD') return false;
     if (filterStatus === 'cleared' && a.status !== 'RESOLVED') return false;
 
@@ -73,6 +74,7 @@ export const FraudAlertsView: React.FC<FraudAlertsViewProps> = ({
   };
 
   const activeHoldCount = alerts.filter((a) => a.status === 'HOLD_ACTIVE').length;
+  const mediumRiskCount = alerts.filter((a) => a.status === 'MEDIUM_RISK').length;
   const confirmedCount = alerts.filter((a) => a.status === 'CONFIRMED_FRAUD').length;
   const clearedCount = alerts.filter((a) => a.status === 'RESOLVED').length;
 
@@ -96,12 +98,25 @@ export const FraudAlertsView: React.FC<FraudAlertsViewProps> = ({
           </button>
           <button
             onClick={() => {
+              setFilterStatus('medium');
+              setCurrentPage(1);
+            }}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              filterStatus === 'medium'
+                ? 'bg-amber-600 text-white shadow-md shadow-amber-600/20'
+                : 'bg-white border border-slate-200 text-amber-700 hover:bg-amber-50'
+            }`}
+          >
+            Medium Risk ({mediumRiskCount})
+          </button>
+          <button
+            onClick={() => {
               setFilterStatus('holds');
               setCurrentPage(1);
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               filterStatus === 'holds'
-                ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20'
+                ? 'bg-red-700 text-white shadow-md shadow-red-700/20'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
@@ -127,11 +142,11 @@ export const FraudAlertsView: React.FC<FraudAlertsViewProps> = ({
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               filterStatus === 'cleared'
-                ? 'bg-blue-700 text-white shadow-md shadow-blue-700/20'
+                ? 'bg-emerald-700 text-white shadow-md shadow-emerald-700/20'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
             }`}
           >
-            Cleared False Positives ({clearedCount})
+            Cleared ({clearedCount})
           </button>
         </div>
 
@@ -209,12 +224,19 @@ export const FraudAlertsView: React.FC<FraudAlertsViewProps> = ({
                         ₹{Number(a.secondAmount).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
                       </td>
                       <td className="py-4 px-6 text-center">
-                        <span className="inline-block px-2.5 py-0.5 rounded-lg bg-red-50 text-red-700 font-bold text-xs border border-red-200">
-                          {score}
+                        <span className={`inline-block px-2.5 py-0.5 rounded-lg font-bold text-xs border ${
+                          a.status === 'MEDIUM_RISK' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-red-50 text-red-700 border-red-200'
+                        }`}>
+                          {a.status === 'MEDIUM_RISK' ? 65 : score}
                         </span>
                       </td>
                       <td className="py-4 px-6">
-                        {isHoldActive ? (
+                        {a.status === 'MEDIUM_RISK' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 text-[11px] font-bold border border-amber-200">
+                            <AlertTriangle className="h-3 w-3 text-amber-500" />
+                            Medium Fraud Chance
+                          </span>
+                        ) : isHoldActive ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 text-[11px] font-bold border border-red-200">
                             <AlertTriangle className="h-3 w-3 text-red-500" />
                             Active Hold

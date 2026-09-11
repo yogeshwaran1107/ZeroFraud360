@@ -398,8 +398,14 @@ export async function executeTransfer({
         const data = await res.json();
         return { success: true, data };
       } else {
-        const errData = await res.json();
-        return { success: false, error: errData.code || 'TRANSFER_FAILED', message: errData.message };
+        const errData = await res.json().catch(() => ({}));
+        const isFraudBlocked = errData.code === 'ACCOUNT_BLOCKED_FRAUD' ||
+          (errData.message && (errData.message.includes('tracking you') || errData.message.includes('marked as a fraud') || errData.message.includes('fraud')));
+        return {
+          success: false,
+          error: isFraudBlocked ? 'ACCOUNT_BLOCKED_FRAUD' : (errData.code || 'TRANSFER_FAILED'),
+          message: isFraudBlocked ? 'You have been marked as a fraud and the officials are tracking you! All outbound transfers are suspended.' : errData.message
+        };
       }
     } catch (err) {
       console.warn('Backend server offline during transfer:', err.message);
@@ -409,6 +415,14 @@ export async function executeTransfer({
   // Fallback Offline Mode Transfer Logic with Persistence
   const sender = mockLedger[activeAccNo] || mockLedger['10001'];
   const receiver = mockLedger[payload.receiverAccountNumber];
+
+  if (sender && sender.status === 'FROZEN') {
+    return {
+      success: false,
+      error: 'ACCOUNT_BLOCKED_FRAUD',
+      message: 'You have been marked as a fraud and the officials are tracking you! All outbound transfers are suspended.'
+    };
+  }
 
   if (payload.amount > sender.availableBalance) {
     return {

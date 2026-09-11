@@ -25,4 +25,8 @@ public interface ObservedTransactionRepository extends JpaRepository<ObservedTra
             @Param("receiverAccountId") String receiverAccountId,
             @Param("windowStart") Instant windowStart,
             @Param("occurredAt") Instant occurredAt);
+
+    List<ObservedTransaction> findBySenderAccountIdOrderByOccurredAtDesc(String senderAccountId);
+
+    List<ObservedTransaction> findByReceiverAccountIdOrderByOccurredAtDesc(String receiverAccountId);
 }

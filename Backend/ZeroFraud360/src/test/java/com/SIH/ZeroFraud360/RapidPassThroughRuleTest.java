@@ -51,7 +51,8 @@ class RapidPassThroughRuleTest {
         assertThat(finding.intermediateAccountId()).isEqualTo("2000000001");
         assertThat(finding.destinationAccountId()).isEqualTo("3000000001");
         assertThat(finding.timeDifferenceSeconds()).isEqualTo(60);
-        assertThat(finding.message()).contains("Account 1000000001 sent ₹10000 to Account 2000000001 and Account 2000000001 sent ₹10000 to Account 3000000001 within 1 minute of the first transaction. Is this fraud and should this transaction be stopped?");
+        assertThat(finding.riskLevel()).isEqualTo("MEDIUM");
+        assertThat(finding.message()).contains("1000000001 sent ₹10000 to Account 2000000001 and Account 2000000001 immediately forwarded ₹10000 to Account 3000000001 within 1 minute");
     }
 
     @Test
@@ -77,7 +78,7 @@ class RapidPassThroughRuleTest {
     }
 
     @Test
-    @DisplayName("Rejects pass-through if amount does not match (e.g. ₹10,000 vs ₹9,000)")
+    @DisplayName("Rejects pass-through if amount is completely unrelated (e.g. ₹10,000 vs ₹2,000)")
     void testRejectsDifferentAmount() {
         Instant t1Time = Instant.parse("2026-09-10T10:00:00Z");
         Instant t2Time = Instant.parse("2026-09-10T10:01:00Z");
@@ -89,7 +90,7 @@ class RapidPassThroughRuleTest {
 
         ObservedTransaction t2 = new ObservedTransaction(
                 "EVT-2", "TXN-2", "2000000001", "3000000001", "BANK_B", "BANK_C",
-                new BigDecimal("9000.00"), "INR", "SIMULATED_UPI", "SUCCESS", "CORR-2", "MSG-2", t2Time
+                new BigDecimal("2000.00"), "INR", "SIMULATED_UPI", "SUCCESS", "CORR-2", "MSG-2", t2Time
         );
 
         PaymentContext context = new PaymentContext(t2, List.of(t1));

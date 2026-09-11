@@ -73,4 +73,28 @@ public class InternalHoldController {
         HoldResponseDto response = holdService.getHold(holdId);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/accounts/{accountId}/freeze")
+    public ResponseEntity<Void> freezeAccount(
+            @PathVariable("accountId") String accountId,
+            @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+            @RequestBody(required = false) ReleaseHoldRequest request) {
+
+        validateServiceToken(serviceToken);
+        String reason = request != null && request.reason() != null ? request.reason() : "Mule network freeze command";
+        holdService.freezeAccount(accountId, reason);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/accounts/{accountId}/unfreeze")
+    public ResponseEntity<Void> unfreezeAccount(
+            @PathVariable("accountId") String accountId,
+            @RequestHeader(value = "X-Service-Token", required = false) String serviceToken,
+            @RequestBody(required = false) ReleaseHoldRequest request) {
+
+        validateServiceToken(serviceToken);
+        String reason = request != null && request.reason() != null ? request.reason() : "Compliance officer clearance";
+        holdService.unfreezeAccount(accountId, reason);
+        return ResponseEntity.ok().build();
+    }
 }

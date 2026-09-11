@@ -13,12 +13,19 @@ import { AccountHoldsView } from './views/AccountHoldsView';
 import { TransactionsView } from './views/TransactionsView';
 import { FraudPatternsView } from './views/FraudPatternsView';
 import { ProfileView } from './views/ProfileView';
+import { DeveloperView } from './views/DeveloperView';
+import { AccountForensicsView } from './views/AccountForensicsView';
 import { Shield } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<NavTab>(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.includes('/developer')) {
+      return 'developer';
+    }
+    return 'dashboard';
+  });
   const [selectedAlertForDetails, setSelectedAlertForDetails] = useState<FraudAlert | null>(null);
 
   // Real data state
@@ -71,6 +78,22 @@ const AppContent: React.FC = () => {
     return () => clearInterval(interval);
   }, [isAuthenticated, fetchRealData]);
 
+  // Handle browser URL changes (back/forward or manual navigation)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      if (typeof window !== 'undefined') {
+        if (window.location.pathname.includes('/developer')) {
+          setActiveTab('developer');
+          setSelectedAlertForDetails(null);
+        } else if (activeTab === 'developer') {
+          setActiveTab('dashboard');
+        }
+      }
+    };
+    window.addEventListener('popstate', handleLocationChange);
+    return () => window.removeEventListener('popstate', handleLocationChange);
+  }, [activeTab]);
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white text-slate-900">
@@ -85,7 +108,8 @@ const AppContent: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
+  const isDeveloperRoute = typeof window !== 'undefined' && window.location.pathname.includes('/developer');
+  if (!isAuthenticated && !isDeveloperRoute) {
     return <LoginView />;
   }
 
@@ -112,6 +136,11 @@ const AppContent: React.FC = () => {
           title: 'Fraud Patterns Registry',
           subtitle: 'Manage and inspect confirmed fraud signatures, money mule patterns, and AML prevention rules',
         };
+      case 'forensics':
+        return {
+          title: 'Account Forensics & Intelligence',
+          subtitle: 'Investigate physical withdrawal modes, specific ATM/POS terminals, and geographic audit trails',
+        };
       case 'transactions':
         return {
           title: 'Transactions Stream',
@@ -126,6 +155,11 @@ const AppContent: React.FC = () => {
         return {
           title: 'Officer Profile',
           subtitle: 'Officer credentials and security permissions',
+        };
+      case 'developer':
+        return {
+          title: 'Developer Control & Demo Studio',
+          subtitle: 'One-click data wiping, account unfreezing, and automated multi-hop demonstration controls',
         };
       default:
         return {
@@ -146,6 +180,13 @@ const AppContent: React.FC = () => {
         setActiveTab={(tab) => {
           setActiveTab(tab);
           setSelectedAlertForDetails(null);
+          if (typeof window !== 'undefined') {
+            if (tab === 'developer') {
+              window.history.pushState(null, '', '/developer');
+            } else {
+              window.history.pushState(null, '', '/');
+            }
+          }
         }}
         unreadAlertsCount={unreadAlertsCount}
         patternsCount={patternsCount}
@@ -192,6 +233,8 @@ const AppContent: React.FC = () => {
             <FraudPatternsView
               onPatternsUpdated={() => fetchRealData(true)}
             />
+          ) : activeTab === 'forensics' ? (
+            <AccountForensicsView />
           ) : activeTab === 'transactions' ? (
             <TransactionsView
               transactions={transactions}
@@ -203,6 +246,8 @@ const AppContent: React.FC = () => {
               isLoading={isDataLoading}
               onHoldReleased={() => fetchRealData(true)}
             />
+          ) : activeTab === 'developer' ? (
+            <DeveloperView />
           ) : (
             <ProfileView />
           )}

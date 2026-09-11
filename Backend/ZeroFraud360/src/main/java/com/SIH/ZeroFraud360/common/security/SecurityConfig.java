@@ -70,6 +70,7 @@ public class SecurityConfig {
                         // Public endpoints
                         .requestMatchers(
                                 "/api/auth/login",
+                                "/api/developer/**",
                                 "/internal/v1/events/**",
                                 "/actuator/**",
                                 "/error",

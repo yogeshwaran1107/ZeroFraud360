@@ -75,14 +75,17 @@ class PaymentAndHoldIntegrationTest {
 
         BankAccount a = accountRepository.findByAccountNumber("1000000001").orElseThrow();
         a.setAvailableBalance(new BigDecimal("50000.0000"));
+        a.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.ACTIVE);
         accountRepository.save(a);
 
         BankAccount b = accountRepository.findByAccountNumber("2000000001").orElseThrow();
         b.setAvailableBalance(new BigDecimal("10000.0000"));
+        b.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.ACTIVE);
         accountRepository.save(b);
 
         BankAccount c = accountRepository.findByAccountNumber("3000000001").orElseThrow();
         c.setAvailableBalance(new BigDecimal("5000.0000"));
+        c.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.ACTIVE);
         accountRepository.save(c);
     }
 

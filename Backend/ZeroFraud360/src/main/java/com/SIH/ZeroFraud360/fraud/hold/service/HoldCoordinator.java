@@ -68,6 +68,13 @@ public class HoldCoordinator {
 
             BankHoldResponseDto response = holdClient.placeHold(alert.getDestinationAccountId(), dto);
 
+            // Also explicitly freeze destination account and intermediate mule account in IndianBankSimulation
+            holdClient.freezeAccount(alert.getDestinationAccountId(), "Destination account in fraud alert " + alert.getAlertId());
+            if (alert.getIntermediateAccountId() != null && !alert.getIntermediateAccountId().isBlank()
+                    && !alert.getIntermediateAccountId().equals(alert.getDestinationAccountId())) {
+                holdClient.freezeAccount(alert.getIntermediateAccountId(), "Suspected mule in fraud alert " + alert.getAlertId());
+            }
+
             holdRequest.setStatus("ACTIVE");
             holdRequest.setBankHoldId(response.holdId());
             holdRequest.setCompletedAt(Instant.now());
@@ -107,24 +114,41 @@ public class HoldCoordinator {
             log.warn("Bank simulation release returned: {} (proceeding with ZeroFraud360 clearance)", ex.getMessage());
         }
 
+        FraudAlert alertToUnfreeze = null;
         if (holdRequest != null) {
             holdRequest.setStatus("RELEASED");
             holdRequest.setCompletedAt(Instant.now());
             holdRequestRepository.save(holdRequest);
 
-            alertRepository.findByAlertId(holdRequest.getAlertId()).ifPresent(alert -> {
-                alert.setStatus(AlertStatus.RESOLVED);
-                alert.setDecisionReason("Cleared by officer (" + officerId + "): " + reason + " [False Positive]");
-                alert.setResolvedAt(Instant.now());
-                alertRepository.save(alert);
-            });
+            var aOpt = alertRepository.findByAlertId(holdRequest.getAlertId());
+            if (aOpt.isPresent()) {
+                alertToUnfreeze = aOpt.get();
+                alertToUnfreeze.setStatus(AlertStatus.RESOLVED);
+                alertToUnfreeze.setDecisionReason("Cleared by officer (" + officerId + "): " + reason + " [False Positive]");
+                alertToUnfreeze.setResolvedAt(Instant.now());
+                alertRepository.save(alertToUnfreeze);
+            }
         } else {
-            alertRepository.findByAlertId(holdId).ifPresent(alert -> {
-                alert.setStatus(AlertStatus.RESOLVED);
-                alert.setDecisionReason("Cleared by officer (" + officerId + "): " + reason + " [False Positive]");
-                alert.setResolvedAt(Instant.now());
-                alertRepository.save(alert);
-            });
+            var aOpt = alertRepository.findByAlertId(holdId);
+            if (aOpt.isPresent()) {
+                alertToUnfreeze = aOpt.get();
+                alertToUnfreeze.setStatus(AlertStatus.RESOLVED);
+                alertToUnfreeze.setDecisionReason("Cleared by officer (" + officerId + "): " + reason + " [False Positive]");
+                alertToUnfreeze.setResolvedAt(Instant.now());
+                alertRepository.save(alertToUnfreeze);
+            }
+        }
+
+        // Unfreeze all associated accounts on IndianBankSimulation
+        if (alertToUnfreeze != null) {
+            if (alertToUnfreeze.getDestinationAccountId() != null) {
+                holdClient.unfreezeAccount(alertToUnfreeze.getDestinationAccountId(), reason);
+            }
+            if (alertToUnfreeze.getIntermediateAccountId() != null) {
+                holdClient.unfreezeAccount(alertToUnfreeze.getIntermediateAccountId(), reason);
+            }
+            log.info("Unfrozen accounts for alertId {}: destination={}, intermediate={}",
+                    alertToUnfreeze.getAlertId(), alertToUnfreeze.getDestinationAccountId(), alertToUnfreeze.getIntermediateAccountId());
         }
     }
 

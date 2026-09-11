@@ -56,6 +56,7 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
 
   const time1 = new Date(alert.createdAt).toLocaleTimeString('en-IN');
   const isHoldActive = alert.status === 'HOLD_ACTIVE';
+  const isMediumRisk = alert.status === 'MEDIUM_RISK';
   const isResolved = alert.status === 'RESOLVED';
   const isConfirmedFraud = alert.status === 'CONFIRMED_FRAUD';
 
@@ -123,7 +124,7 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
 
         {/* Action Buttons for Authorized Officers */}
         <div className="flex items-center gap-2">
-          {isHoldActive && (
+          {(isHoldActive || isMediumRisk) && (
             <>
               <button
                 onClick={() => {
@@ -150,39 +151,55 @@ export const TransactionDetailsView: React.FC<TransactionDetailsViewProps> = ({
           {isConfirmedFraud && (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-xs font-bold text-red-700">
               <Ban className="h-4 w-4" />
-              Fraud Confirmed & Funds Blocked
+              Fraud Confirmed &amp; Funds Blocked
             </span>
           )}
           {isResolved && (
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-700">
               <CheckCircle2 className="h-4 w-4" />
-              False Positive & Hold Released
+              False Positive &amp; Hold Released
             </span>
           )}
         </div>
       </div>
 
-      {/* Red Suspicious Banner matching reference image */}
-      <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-center justify-between">
+      {/* Banner matching alert status and severity */}
+      <div className={`border rounded-2xl p-5 flex items-center justify-between ${
+        isMediumRisk ? 'bg-amber-50 border-amber-200' : isResolved ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'
+      }`}>
         <div className="flex items-center gap-3.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-500 text-white shadow-md shadow-red-500/20">
+          <div className={`flex h-10 w-10 items-center justify-center rounded-xl text-white shadow-md ${
+            isMediumRisk ? 'bg-amber-500 shadow-amber-500/20' : isResolved ? 'bg-emerald-600 shadow-emerald-600/20' : 'bg-red-500 shadow-red-500/20'
+          }`}>
             <AlertTriangle className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-red-900">
-              This transaction is flagged as Suspicious
+            <h3 className={`text-sm font-bold ${
+              isMediumRisk ? 'text-amber-900' : isResolved ? 'text-emerald-900' : 'text-red-900'
+            }`}>
+              {isMediumRisk
+                ? 'This transaction is flagged as Medium Fraud Chance'
+                : isResolved
+                ? 'This alert has been Cleared (False Positive)'
+                : 'This transaction is flagged as Critical Fraud (STOP & HOLD)'}
             </h3>
-            <p className="text-xs text-red-700 mt-0.5">
-              High risk detected based on money flow pattern (A &rarr; B &rarr; C within 3 minutes).
+            <p className={`text-xs mt-0.5 ${
+              isMediumRisk ? 'text-amber-700' : isResolved ? 'text-emerald-700' : 'text-red-700'
+            }`}>
+              {alert.decisionReason || 'Rapid multi-hop funds movement pattern detected across participating bank accounts.'}
             </p>
           </div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase font-bold text-red-700 tracking-wider">
+          <div className={`text-[10px] uppercase font-bold tracking-wider ${
+            isMediumRisk ? 'text-amber-700' : isResolved ? 'text-emerald-700' : 'text-red-700'
+          }`}>
             Risk Score
           </div>
-          <div className="text-2xl font-black text-red-600">
-            {alert.decision === 'STOP' ? '95' : '75'}
+          <div className={`text-2xl font-black ${
+            isMediumRisk ? 'text-amber-600' : isResolved ? 'text-emerald-600' : 'text-red-600'
+          }`}>
+            {isMediumRisk ? '65' : isResolved ? '10' : '98'}
           </div>
         </div>
       </div>

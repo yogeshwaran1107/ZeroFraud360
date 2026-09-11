@@ -64,6 +64,14 @@ public class PaymentService {
         BankAccount receiver = accountRepository.findByAccountNumber(request.receiverAccountNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver account", request.receiverAccountNumber()));
 
+        boolean isSenderBlockedOrFrozen = sender.getStatus() == AccountStatus.FROZEN
+                || holdRepository.existsByAccountIdAndStatusIn(sender.getAccountNumber(), java.util.List.of(HoldStatus.BLOCKED));
+        if (isSenderBlockedOrFrozen) {
+            log.warn("Transfer BLOCKED for account {}: Account is marked as fraud/frozen", sender.getAccountNumber());
+            throw new BankingException(HttpStatus.FORBIDDEN, "ACCOUNT_BLOCKED_FRAUD",
+                    "You have been marked as a fraud and the officials are tracking you! All outbound transfers are suspended.");
+        }
+
         if (sender.getStatus() != AccountStatus.ACTIVE) {
             throw new BankingException(HttpStatus.BAD_REQUEST, "ACCOUNT_INACTIVE", "Sender account is not active");
         }

@@ -70,7 +70,24 @@ public class FraudAlertService {
         alert = alertRepository.save(alert);
         log.warn("Created fraud alert: alertId={}, dedupKey={}, message={}", alertId, dedupKey, finding.message());
 
-        // Prepare external decision request
+        // Handle Medium Fraud Chance (Hop 2) vs Critical Fraud Chain (Hop 3+)
+        if ("MEDIUM".equalsIgnoreCase(finding.riskLevel())) {
+            alert.setStatus(AlertStatus.MEDIUM_RISK);
+            alert.setDecision(DecisionType.PENDING);
+            alert.setDecisionReason(finding.message());
+            alert = alertRepository.save(alert);
+            log.warn("Registered MEDIUM_RISK alert for surveillance: alertId={}, accounts={}->{}->{}",
+                    alertId, alert.getSourceAccountId(), alert.getIntermediateAccountId(), alert.getDestinationAccountId());
+
+            try {
+                notificationService.broadcastFraudAlert(alert);
+            } catch (Exception nEx) {
+                log.error("Failed to broadcast medium risk notification for alert {}: {}", alertId, nEx.getMessage());
+            }
+            return alert;
+        }
+
+        // Prepare external decision request for Critical Fraud / Escalations
         String decRequestId = "DEC-" + alertId;
         DecisionApiRequestDto decRequest = new DecisionApiRequestDto(
                 decRequestId,
@@ -97,15 +114,23 @@ public class FraudAlertService {
         );
 
         try {
-            DecisionApiResponseDto decResponse = decisionApiClient.requestDecision(decRequest);
-            if (DecisionType.STOP.name().equalsIgnoreCase(decResponse.decision())) {
+            DecisionApiResponseDto decResponse = null;
+            try {
+                decResponse = decisionApiClient.requestDecision(decRequest);
+            } catch (Exception dEx) {
+                log.warn("External Decision API unavailable (fallback to internal rule STOP): {}", dEx.getMessage());
+            }
+
+            boolean shouldStop = decResponse == null || DecisionType.STOP.name().equalsIgnoreCase(decResponse.decision());
+
+            if (shouldStop) {
                 alert.setDecision(DecisionType.STOP);
-                alert.setDecisionReason(decResponse.reason());
+                alert.setDecisionReason(decResponse != null ? decResponse.reason() : finding.message());
                 alert.setStatus(AlertStatus.STOP_RECEIVED);
                 alert.setExternalDecisionRequestId(decRequestId);
                 alertRepository.save(alert);
 
-                // Command IndianBankSimulation to place hold on destination account
+                // Command IndianBankSimulation to place hold on destination account & freeze intermediate mule
                 holdCoordinator.executeStopHold(alert);
 
                 // Broadcast urgent notification to Police, Cyber Crime, Bank, and Victim

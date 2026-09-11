@@ -19,6 +19,7 @@ export type AlertStatus =
   | 'DECISION_REQUESTED'
   | 'HOLD_REQUESTED'
   | 'HOLD_ACTIVE'
+  | 'MEDIUM_RISK'
   | 'RESOLVED'
   | 'CONFIRMED_FRAUD'
   | 'DISMISSED'
@@ -128,4 +129,86 @@ export interface FraudPattern {
   alertId?: string;
   status: 'ACTIVE' | 'ARCHIVED' | string;
   createdAt: string;
+}
+
+export interface QuickAccount {
+  accountNumber: string;
+  customerName: string;
+  bankCode: string;
+  status: string;
+  availableBalance: number;
+}
+
+export interface ForensicsSummary {
+  totalWithdrawalsAmount: number;
+  totalWithdrawalsCount: number;
+  totalInflowAmount: number;
+  totalInflowCount: number;
+  highestSingleWithdrawal: number;
+  primaryWithdrawalMode: string;
+  primaryLocation: string;
+}
+
+export interface WithdrawalModeStat {
+  mode: string;
+  label: string;
+  totalAmount: number;
+  count: number;
+  percentage: number;
+  averageAmount: number;
+  icon: string;
+}
+
+export interface LocationWithdrawalStat {
+  locationId: string;
+  city: string;
+  state: string;
+  terminalOrBranch: string;
+  latitude: number;
+  longitude: number;
+  totalAmount: number;
+  count: number;
+  lastActivityAt: string;
+  riskTag: string;
+}
+
+export interface GeoVelocityAlert {
+  alertId: string;
+  message: string;
+  fromCity: string;
+  toCity: string;
+  timeDifferenceMinutes: number;
+  distanceKm: number;
+  severity: string;
+}
+
+export interface ForensicTransactionItem {
+  transactionId: string;
+  timestamp: string;
+  mode: string;
+  modeLabel: string;
+  type: 'DEBIT' | 'CREDIT' | string;
+  amount: number;
+  city: string;
+  terminal: string;
+  counterparty: string;
+  status: string;
+  anomalyFlag: string;
+}
+
+export interface AccountForensics {
+  accountNumber: string;
+  customerName: string;
+  bankCode: string;
+  bankName: string;
+  status: string;
+  availableBalance: number;
+  currency: string;
+  riskScore: number;
+  riskLevel: string;
+  summary: ForensicsSummary;
+  modeBreakdowns: WithdrawalModeStat[];
+  locations: LocationWithdrawalStat[];
+  velocityAlerts: GeoVelocityAlert[];
+  auditLedger: ForensicTransactionItem[];
 }

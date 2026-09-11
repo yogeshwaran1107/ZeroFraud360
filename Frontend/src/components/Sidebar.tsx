@@ -8,9 +8,10 @@ import {
   Shield,
   ShieldCheck,
   Building2,
+  MapPin,
 } from 'lucide-react';
 
-export type NavTab = 'dashboard' | 'alerts' | 'patterns' | 'transactions' | 'holds' | 'profile';
+export type NavTab = 'dashboard' | 'alerts' | 'patterns' | 'forensics' | 'transactions' | 'holds' | 'profile' | 'developer';
 
 interface SidebarProps {
   activeTab: NavTab;
@@ -36,6 +37,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'alerts', label: 'Fraud Alerts', icon: Bell, badge: unreadAlertsCount },
     { id: 'patterns', label: 'Fraud Patterns', icon: ShieldCheck, badge: patternsCount > 0 ? patternsCount : undefined },
+    { id: 'forensics', label: 'Account Forensics', icon: MapPin },
     { id: 'transactions', label: 'Transactions', icon: CreditCard },
     { id: 'holds', label: 'Account Holds', icon: Lock },
     { id: 'profile', label: 'My Profile', icon: User },

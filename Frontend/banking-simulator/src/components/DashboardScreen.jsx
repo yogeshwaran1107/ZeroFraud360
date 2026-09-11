@@ -131,6 +131,59 @@ export default function DashboardScreen({ onNavigate, onSelectBeneficiary }) {
           </div>
         </div>
 
+        {/* Account Frozen & Tracked Banner */}
+        {account?.status === 'FROZEN' && (
+          <div style={{
+            margin: '0 20px 16px',
+            padding: '14px 16px',
+            borderRadius: '16px',
+            background: '#fff1f2',
+            border: '2px solid #f43f5e',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '12px',
+            boxShadow: '0 8px 16px -4px rgba(244, 63, 94, 0.2)'
+          }}>
+            <div style={{
+              width: '36px',
+              height: '36px',
+              borderRadius: '10px',
+              background: '#ffe4e6',
+              color: '#e11d48',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              flexShrink: 0
+            }}>
+              <i className="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontSize: '11px',
+                fontWeight: '800',
+                color: '#be123c',
+                letterSpacing: '0.05em',
+                marginBottom: '2px'
+              }}>
+                ACCOUNT RESTRICTED & TRACKED
+              </div>
+              <div style={{
+                fontSize: '13px',
+                fontWeight: '800',
+                color: '#881337',
+                lineHeight: '1.3',
+                marginBottom: '4px'
+              }}>
+                You have been marked as a fraud and the officials are tracking you!
+              </div>
+              <div style={{ fontSize: '11px', color: '#9f1239', lineHeight: '1.4' }}>
+                All fund transfers from Account <strong>{accNo}</strong> have been suspended. Multi-hop layering investigation in progress.
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="dashboard-content">
           {/* Account Balance Card */}
           <div className="account-card">

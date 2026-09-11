@@ -7,6 +7,8 @@ import type {
   ReleaseHoldResponse,
   PaymentSuccessEventPayload,
   ApiError,
+  QuickAccount,
+  AccountForensics,
 } from '../types';
 
 
@@ -160,6 +162,14 @@ export const api = {
         }
       );
     },
+
+    getQuickAccounts: async (): Promise<QuickAccount[]> => {
+      return apiRequest<QuickAccount[]>('/api/fraud/accounts/quick-list');
+    },
+
+    getAccountForensics: async (accountId: string): Promise<AccountForensics> => {
+      return apiRequest<AccountForensics>(`/api/fraud/accounts/${encodeURIComponent(accountId)}/forensics`);
+    },
   },
 
   officer: {
@@ -218,6 +228,47 @@ export const api = {
           body: JSON.stringify(payload),
         }
       );
+    },
+  },
+
+  developer: {
+    resetAll: async (): Promise<{ success: boolean; message: string; bankSimulationResult?: string }> => {
+      return apiRequest('/api/developer/reset-all', { method: 'POST' });
+    },
+    resetZeroFraud: async (): Promise<{ success: boolean; message: string }> => {
+      return apiRequest('/api/developer/reset-zerofraud', { method: 'POST' });
+    },
+    unfreezeAll: async (): Promise<{ success: boolean; message: string }> => {
+      return apiRequest('/api/developer/unfreeze-all', { method: 'POST' });
+    },
+    getStatus: async (): Promise<{
+      observedTransactionsCount: number;
+      fraudAlertsCount: number;
+      mediumRiskAlertsCount: number;
+      criticalAlertsCount: number;
+      holdRequestsCount: number;
+      fraudPatternsCount: number;
+      bankSimulationConnected: boolean;
+      zeroFraudConnected: boolean;
+      timestamp: string;
+    }> => {
+      return apiRequest('/api/developer/status');
+    },
+    getBankAccounts: async (): Promise<Array<{
+      accountNumber: string;
+      customerName: string;
+      availableBalance: number;
+      currency: string;
+      status: string;
+      bankCode: string;
+    }>> => {
+      try {
+        const res = await fetch('http://localhost:8080/api/developer/accounts');
+        if (!res.ok) return [];
+        return res.json();
+      } catch {
+        return [];
+      }
     },
   },
 };

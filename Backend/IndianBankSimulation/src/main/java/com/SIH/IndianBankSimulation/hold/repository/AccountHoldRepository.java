@@ -23,4 +23,8 @@ public interface AccountHoldRepository extends JpaRepository<AccountHold, Long> 
 
     @Query("SELECT COALESCE(SUM(h.amount), 0) FROM AccountHold h WHERE h.accountId = :accountId AND (h.status = :status OR h.status = com.SIH.IndianBankSimulation.hold.domain.HoldStatus.BLOCKED)")
     BigDecimal sumActiveHoldAmount(@Param("accountId") String accountId, @Param("status") HoldStatus status);
+
+    long countByAccountIdAndStatusIn(String accountId, List<HoldStatus> statuses);
+
+    boolean existsByAccountIdAndStatusIn(String accountId, List<HoldStatus> statuses);
 }

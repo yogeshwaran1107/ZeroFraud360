@@ -43,7 +43,7 @@ bank:
       enabled: true
     expiration-check-interval-ms: 15000
   outbox:
-    publisher-interval-ms: 5000
+    publisher-interval-ms: 1000
 
 security:
   internal-service:

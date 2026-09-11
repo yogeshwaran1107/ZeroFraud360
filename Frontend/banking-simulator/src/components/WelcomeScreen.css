@@ -55,58 +55,67 @@
   margin: 0;
 }
 
-/* Center Map & Rupee Orbit Illustration */
-.map-illustration-container {
-  position: relative;
-  width: 100%;
-  height: 240px;
+/* Center Map Image Card */
+.center-map-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin: 15px 0;
-}
-
-.india-map-watermark {
-  position: absolute;
-  width: 250px;
-  height: 250px;
-  opacity: 0.6;
-}
-
-.india-svg {
+  margin: 12px 0 16px 0;
   width: 100%;
-  height: 100%;
 }
 
-.rupee-orbit {
+.center-map-card {
   position: relative;
-  width: 130px;
-  height: 130px;
+  width: 100%;
+  max-width: 320px;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 10px 12px 8px 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.15);
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  z-index: 2;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
-.rupee-symbol {
-  font-size: 48px;
+.center-map-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.45);
+}
+
+.center-map-img {
+  width: 100%;
+  height: 180px;
+  object-fit: contain;
+  border-radius: 12px;
+  display: block;
+  background: #ffffff;
+}
+
+.map-badge-overlay {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.95);
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+  color: #0b4582;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
 }
 
-.orbit-arrows-svg {
-  position: absolute;
-  top: -20px;
-  left: -20px;
-  width: 170px;
-  height: 170px;
-  animation: spinOrbit 25s linear infinite;
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+  animation: pulseDot 2s infinite;
 }
 
-@keyframes spinOrbit {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes pulseDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
 }
 
 /* Features List */

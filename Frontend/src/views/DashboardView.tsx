@@ -96,8 +96,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
   const maxBinVal = Math.max(1, ...timeBins.map((b) => b.count + b.alertCount));
 
-  // Quick 1-Click Simulator Bridge: triggers real pass-through mule transfer between the 6 real accounts
-  const handleTriggerLiveAttack = async () => {
+  const mediumRiskCount = alerts.filter((a) => a.status === 'MEDIUM_RISK').length;
+
+  // Simulator Bridge: 2-Hop Transfer (A -> B -> C) triggers Medium Fraud Chance
+  const handleTrigger2HopAttack = async () => {
     setIsSimulating(true);
     setSimSuccessMessage(null);
     const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -106,11 +108,59 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const leg2Time = now.toISOString();
 
     try {
+      // Leg 1: Muthukumaran M (10001) -> Naveen K (10002) ₹12,000
+      await api.events.ingestPaymentSuccess({
+        eventId: `EVT-2HOP-L1-${suffix}`,
+        eventType: 'PAYMENT_SUCCESS',
+        transactionId: `TXN-2HOP-L1-${suffix}`,
+        occurredAt: leg1Time,
+        sender: { accountId: 'ACC-10001', accountNumber: '10001', bankId: 'SIM_BANK_A' },
+        receiver: { accountId: 'ACC-10002', accountNumber: '10002', bankId: 'SIM_BANK_B' },
+        amount: 12000.0,
+        currency: 'INR',
+        paymentRail: 'SIMULATED_UPI',
+      });
+
+      // Leg 2: Naveen K (10002) -> Yogeshwaran V (10003) ₹12,000 within 40 seconds
+      await api.events.ingestPaymentSuccess({
+        eventId: `EVT-2HOP-L2-${suffix}`,
+        eventType: 'PAYMENT_SUCCESS',
+        transactionId: `TXN-2HOP-L2-${suffix}`,
+        occurredAt: leg2Time,
+        sender: { accountId: 'ACC-10002', accountNumber: '10002', bankId: 'SIM_BANK_B' },
+        receiver: { accountId: 'ACC-10003', accountNumber: '10003', bankId: 'SIM_BANK_C' },
+        amount: 12000.0,
+        currency: 'INR',
+        paymentRail: 'SIMULATED_UPI',
+      });
+
+      setSimSuccessMessage(
+        '2-Hop Pass-Through Ingested: 10001 -> 10002 -> 10003 (₹12,000). ZeroFraud360 marked this as Medium Fraud Chance (under surveillance).'
+      );
+      if (onSimulationTriggered) onSimulationTriggered();
+    } catch (err: any) {
+      alert('Error triggering 2-hop simulation: ' + err.message);
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  // Simulator Bridge: 3-Hop Escalation (A -> B -> C -> D) triggers Critical Fraud & Account Freeze
+  const handleTrigger3HopEscalation = async () => {
+    setIsSimulating(true);
+    setSimSuccessMessage(null);
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const now = new Date();
+    const leg1Time = new Date(now.getTime() - 80 * 1000).toISOString();
+    const leg2Time = new Date(now.getTime() - 40 * 1000).toISOString();
+    const leg3Time = now.toISOString();
+
+    try {
       // Leg 1: Muthukumaran M (10001) -> Naveen K (10002) ₹15,000
       await api.events.ingestPaymentSuccess({
-        eventId: `EVT-LIVE-L1-${suffix}`,
+        eventId: `EVT-3HOP-L1-${suffix}`,
         eventType: 'PAYMENT_SUCCESS',
-        transactionId: `TXN-SIM-L1-${suffix}`,
+        transactionId: `TXN-3HOP-L1-${suffix}`,
         occurredAt: leg1Time,
         sender: { accountId: 'ACC-10001', accountNumber: '10001', bankId: 'SIM_BANK_A' },
         receiver: { accountId: 'ACC-10002', accountNumber: '10002', bankId: 'SIM_BANK_B' },
@@ -119,11 +169,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         paymentRail: 'SIMULATED_UPI',
       });
 
-      // Leg 2: Naveen K (10002) -> Yogeshwaran V (10003) ₹15,000 within 40 seconds
+      // Leg 2: Naveen K (10002) -> Yogeshwaran V (10003) ₹15,000
       await api.events.ingestPaymentSuccess({
-        eventId: `EVT-LIVE-L2-${suffix}`,
+        eventId: `EVT-3HOP-L2-${suffix}`,
         eventType: 'PAYMENT_SUCCESS',
-        transactionId: `TXN-SIM-L2-${suffix}`,
+        transactionId: `TXN-3HOP-L2-${suffix}`,
         occurredAt: leg2Time,
         sender: { accountId: 'ACC-10002', accountNumber: '10002', bankId: 'SIM_BANK_B' },
         receiver: { accountId: 'ACC-10003', accountNumber: '10003', bankId: 'SIM_BANK_C' },
@@ -132,12 +182,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         paymentRail: 'SIMULATED_UPI',
       });
 
+      // Leg 3: Yogeshwaran V (10003) -> Kanika (10004) ₹15,000
+      await api.events.ingestPaymentSuccess({
+        eventId: `EVT-3HOP-L3-${suffix}`,
+        eventType: 'PAYMENT_SUCCESS',
+        transactionId: `TXN-3HOP-L3-${suffix}`,
+        occurredAt: leg3Time,
+        sender: { accountId: 'ACC-10003', accountNumber: '10003', bankId: 'SIM_BANK_C' },
+        receiver: { accountId: 'ACC-10004', accountNumber: '10004', bankId: 'SIM_BANK_A' },
+        amount: 15000.0,
+        currency: 'INR',
+        paymentRail: 'SIMULATED_UPI',
+      });
+
       setSimSuccessMessage(
-        'Real-time fraud event generated: Muthukumaran (10001) -> Naveen (10002) -> Yogeshwaran (10003) ₹15,000. Flagged by ML engine!'
+        '🚨 3-Hop Mule Layering Escalation Ingested: 10001 -> 10002 -> 10003 -> 10004 (₹15,000). CRITICAL FRAUD DETECTED! Accounts 10003 and 10004 FROZEN & funds held!'
       );
       if (onSimulationTriggered) onSimulationTriggered();
     } catch (err: any) {
-      alert('Error triggering simulation event: ' + err.message);
+      alert('Error triggering 3-hop simulation: ' + err.message);
     } finally {
       setIsSimulating(false);
     }
@@ -158,28 +221,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               <h3 className="text-xs font-bold text-slate-900">
                 Live Bank Simulator Bridge Connected (:3000 &harr; :8081)
               </h3>
-              <span className="px-2 py-0.2 rounded-full bg-blue-100 text-blue-800 text-[10px] font-extrabold">
-                Live Feed
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-mono text-[10px] font-bold border border-emerald-200">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                ACTIVE
               </span>
             </div>
             <p className="text-[11px] text-slate-500 mt-0.5">
-              Continuously syncing actual transactions and rapid pass-through anomalies between active customer accounts.
+              Hop 1 $\rightarrow$ Hop 2 triggers <strong>Medium Fraud Chance</strong>. Hop 3 ($C \rightarrow D$) triggers <strong>Critical Fraud &amp; Account Freeze</strong>.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={handleTriggerLiveAttack}
-          disabled={isSimulating}
-          className="flex items-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 py-2 text-xs font-bold text-white shadow-xs transition-all cursor-pointer shrink-0 disabled:opacity-50"
-        >
-          <Zap className={`h-3.5 w-3.5 ${isSimulating ? 'animate-bounce' : ''}`} />
-          <span>{isSimulating ? 'Simulating Event...' : 'Test Fraud Detection Live'}</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleTrigger2HopAttack}
+            disabled={isSimulating}
+            className="flex items-center gap-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white px-3.5 py-2 text-xs font-bold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <Zap className="h-3.5 w-3.5" />
+            <span>{isSimulating ? 'Processing...' : 'Simulate 2-Hop (Medium)'}</span>
+          </button>
+          <button
+            onClick={handleTrigger3HopEscalation}
+            disabled={isSimulating}
+            className="flex items-center gap-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white px-3.5 py-2 text-xs font-bold shadow-xs transition-all disabled:opacity-50 cursor-pointer"
+          >
+            <ShieldAlert className="h-3.5 w-3.5" />
+            <span>{isSimulating ? 'Processing...' : 'Simulate 3-Hop (Critical Freeze)'}</span>
+          </button>
+        </div>
       </div>
 
       {simSuccessMessage && (
-        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 animate-fadeIn">
+        <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center gap-2 animate-fadeIn font-medium">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
           <span>{simSuccessMessage}</span>
         </div>
@@ -204,39 +278,39 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* Card 2: Suspicious Transactions */}
+        {/* Card 2: Medium Risk Alerts */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex items-center justify-between">
           <div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 mb-3">
               <AlertTriangle className="h-5 w-5" />
             </div>
-            <p className="text-xs font-semibold text-slate-500">Suspicious Transactions</p>
+            <p className="text-xs font-semibold text-slate-500">Medium Fraud Chance</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-slate-900">
-                {isLoading ? '...' : suspiciousCount.toLocaleString()}
+              <span className="text-2xl font-black text-amber-700">
+                {isLoading ? '...' : mediumRiskCount.toLocaleString()}
               </span>
-              {suspiciousCount > 0 && (
-                <span className="text-[11px] font-bold text-rose-600">&uarr; Flagged</span>
+              {mediumRiskCount > 0 && (
+                <span className="text-[11px] font-bold text-amber-600">&uarr; Surveillance</span>
               )}
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Rapid Pass-Through &amp; Spikes</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">2-Hop Rapid Pass-Through</p>
           </div>
         </div>
 
         {/* Card 3: Accounts on Hold */}
         <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-xs flex items-center justify-between">
           <div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600 mb-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600 mb-3">
               <Lock className="h-5 w-5" />
             </div>
-            <p className="text-xs font-semibold text-slate-500">Accounts on Hold</p>
+            <p className="text-xs font-semibold text-slate-500">Accounts on Hold / Frozen</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="text-2xl font-black text-slate-900">
+              <span className="text-2xl font-black text-rose-700">
                 {isLoading ? '...' : activeHoldsCount.toLocaleString()}
               </span>
-              <span className="text-[11px] font-bold text-amber-600">Active Locked</span>
+              <span className="text-[11px] font-bold text-rose-600">Active Freeze</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Funds Held on Simulation</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Mule Accounts Blocked on Bank</p>
           </div>
         </div>
 
@@ -253,7 +327,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               </span>
               <span className="text-[11px] font-bold text-rose-600">Decision STOP</span>
             </div>
-            <p className="text-[10px] text-slate-400 mt-0.5">Verified by ML / Officer</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">Stored in Pattern Registry</p>
           </div>
         </div>
       </div>

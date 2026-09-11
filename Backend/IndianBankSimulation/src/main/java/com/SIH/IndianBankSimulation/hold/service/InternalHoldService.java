@@ -68,7 +68,7 @@ public class InternalHoldService {
         );
 
         AccountHold saved = holdRepository.save(hold);
-        log.info("Placed fund hold: holdId={}, account={}, amount={}, expiresAt={}",
+        log.warn("Placed fund hold: holdId={}, account={}, amount={}, expiresAt={}",
                 saved.getHoldId(), saved.getAccountId(), saved.getAmount(), saved.getExpiresAt());
 
         return new CreateHoldResponse(
@@ -98,6 +98,17 @@ public class InternalHoldService {
         log.info("Released fund hold: holdId={}, account={}, reason={}",
                 holdId, saved.getAccountId(), saved.getReleaseReason());
 
+        // If no active or blocked holds remain on this account, restore to ACTIVE
+        long remainingHolds = holdRepository.countByAccountIdAndStatusIn(
+                hold.getAccountId(), List.of(HoldStatus.ACTIVE, HoldStatus.BLOCKED));
+        if (remainingHolds == 0) {
+            accountRepository.findByAccountNumber(hold.getAccountId()).ifPresent(acc -> {
+                acc.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.ACTIVE);
+                accountRepository.save(acc);
+                log.info("Restored account {} to ACTIVE status after all holds released", acc.getAccountNumber());
+            });
+        }
+
         return toDto(saved);
     }
 
@@ -109,10 +120,43 @@ public class InternalHoldService {
         hold.setStatus(HoldStatus.BLOCKED);
         hold.setReleaseReason(request != null && request.reason() != null ? request.reason() : "Officially confirmed fraud - funds blocked");
         AccountHold saved = holdRepository.save(hold);
-        log.warn("PERMANENTLY BLOCKED fraudulent funds: holdId={}, account={}, amount={}, reason={}",
+        
+        accountRepository.findByAccountNumber(hold.getAccountId()).ifPresent(acc -> {
+            acc.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.FROZEN);
+            accountRepository.save(acc);
+        });
+
+        log.warn("PERMANENTLY BLOCKED fraudulent funds & FROZE account: holdId={}, account={}, amount={}, reason={}",
                 holdId, saved.getAccountId(), saved.getAmount(), saved.getReleaseReason());
 
         return toDto(saved);
+    }
+
+    @Transactional
+    public void freezeAccount(String accountId, String reason) {
+        accountRepository.findByAccountNumber(accountId).ifPresent(acc -> {
+            acc.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.FROZEN);
+            accountRepository.save(acc);
+            log.warn("Account {} explicitly FROZEN by compliance command: {}", accountId, reason);
+        });
+    }
+
+    @Transactional
+    public void unfreezeAccount(String accountId, String reason) {
+        // Release any existing active holds
+        List<AccountHold> activeHolds = holdRepository.findAllByAccountIdAndStatus(accountId, HoldStatus.ACTIVE);
+        for (AccountHold h : activeHolds) {
+            h.setStatus(HoldStatus.RELEASED);
+            h.setReleasedAt(Instant.now());
+            h.setReleaseReason(reason != null ? reason : "Account unfreeze clearance");
+            holdRepository.save(h);
+        }
+
+        accountRepository.findByAccountNumber(accountId).ifPresent(acc -> {
+            acc.setStatus(com.SIH.IndianBankSimulation.account.domain.AccountStatus.ACTIVE);
+            accountRepository.save(acc);
+            log.info("Account {} explicitly UNFROZEN to ACTIVE by compliance clearance: {}", accountId, reason);
+        });
     }
 
     @Transactional(readOnly = true)

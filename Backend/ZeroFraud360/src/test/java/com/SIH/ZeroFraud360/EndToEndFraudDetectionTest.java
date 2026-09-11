@@ -95,19 +95,22 @@ class EndToEndFraudDetectionTest {
                 );
         String policeToken = jwtProvider.generateToken(policePrincipal);
 
-        Instant t1Time = Instant.now().minus(Duration.ofSeconds(60));
-        Instant t2Time = Instant.now();
+        Instant t1Time = Instant.now().minus(Duration.ofSeconds(120));
+        Instant t2Time = Instant.now().minus(Duration.ofSeconds(60));
+        Instant t3Time = Instant.now();
 
         // Configure mock Decision API to command STOP
         when(decisionApiClient.requestDecision(any())).thenAnswer(invocation ->
-                new DecisionApiResponseDto("REQ-DEC-1", DecisionType.STOP.name(), "Rapid pass-through detected: STOP transaction")
+                new DecisionApiResponseDto("REQ-DEC-1", DecisionType.STOP.name(), "Multi-hop layering detected: STOP transaction")
         );
 
-        // Configure mock BankSimulationHoldClient to confirm hold on Account C
-        when(bankHoldClient.placeHold(eq("3000000001"), any())).thenAnswer(invocation ->
-                new BankHoldResponseDto("HOLD-BANK-9001", "3000000001", new BigDecimal("10000.00"), "ACTIVE", Instant.now().plus(Duration.ofMinutes(10)))
+        // Configure mock BankSimulationHoldClient to confirm hold on accounts
+        when(bankHoldClient.placeHold(any(), any())).thenAnswer(invocation ->
+                new BankHoldResponseDto("HOLD-BANK-9001", invocation.getArgument(0), new BigDecimal("10000.00"), "ACTIVE", Instant.now().plus(Duration.ofMinutes(10)))
         );
         doNothing().when(bankHoldClient).releaseHold(any(), any());
+        doNothing().when(bankHoldClient).freezeAccount(any(), any());
+        doNothing().when(bankHoldClient).unfreezeAccount(any(), any());
 
         // Step 1: Ingest T1 (Account A -> Account B, ₹10,000)
         PaymentSuccessEvent event1 = new PaymentSuccessEvent(
@@ -133,7 +136,7 @@ class EndToEndFraudDetectionTest {
         // No alerts should exist after T1
         assertThat(alertRepository.count()).isEqualTo(0);
 
-        // Step 2: Ingest T2 (Account B -> Account C, ₹10,000, 60 seconds later)
+        // Step 2: Ingest T2 (Account B -> Account C, ₹10,000, 60 seconds later) -> Hop 2: MEDIUM_RISK
         PaymentSuccessEvent event2 = new PaymentSuccessEvent(
                 "EVT-002",
                 "PAYMENT_SUCCESS",
@@ -154,30 +157,56 @@ class EndToEndFraudDetectionTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PROCESSED"));
 
-        // Step 3: Verify Fraud Alert was created with HOLD_ACTIVE status
-        List<FraudAlert> alerts = alertRepository.findAll();
-        assertThat(alerts).hasSize(1);
-        FraudAlert alert = alerts.get(0);
-        assertThat(alert.getStatus()).isEqualTo(AlertStatus.HOLD_ACTIVE);
-        assertThat(alert.getDecision()).isEqualTo(DecisionType.STOP);
-        assertThat(alert.getFirstTransactionId()).isEqualTo("TXN-001");
-        assertThat(alert.getSecondTransactionId()).isEqualTo("TXN-002");
-        assertThat(alert.getSourceAccountId()).isEqualTo("1000000001");
-        assertThat(alert.getIntermediateAccountId()).isEqualTo("2000000001");
-        assertThat(alert.getDestinationAccountId()).isEqualTo("3000000001");
-        assertThat(alert.getFirstAmount()).isEqualByComparingTo("10000.00");
-        assertThat(alert.getSecondAmount()).isEqualByComparingTo("10000.00");
+        // Step 2 Verification: 2-Hop flagged as MEDIUM_RISK surveillance alert
+        List<FraudAlert> alertsAfterT2 = alertRepository.findAll();
+        assertThat(alertsAfterT2).hasSize(1);
+        FraudAlert medAlert = alertsAfterT2.get(0);
+        assertThat(medAlert.getStatus()).isEqualTo(AlertStatus.MEDIUM_RISK);
+        assertThat(medAlert.getDecision()).isEqualTo(DecisionType.PENDING);
 
-        // Step 4: Verify Fraud Query API returns the alert with Bearer JWT
+        // Step 3: Ingest T3 (Account C -> Account D, ₹10,000, 60 seconds later) -> Hop 3: MULTI_HOP_FRAUD_CHAIN CRITICAL
+        PaymentSuccessEvent event3 = new PaymentSuccessEvent(
+                "EVT-003",
+                "PAYMENT_SUCCESS",
+                "TXN-003",
+                t3Time,
+                new AccountParticipantDto("ACC-C", "3000000001", "BANK_C"),
+                new AccountParticipantDto("ACC-D", "4000000001", "BANK_D"),
+                new BigDecimal("10000.00"),
+                "INR",
+                "SIMULATED_UPI",
+                "CORR-003",
+                "MSG-003"
+        );
+
+        mockMvc.perform(post("/internal/v1/events/payment-success")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(event3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PROCESSED"));
+
+        // Step 3 Verification: 3-Hop escalated to CRITICAL fraud with STOP decision and HOLD_ACTIVE status
+        List<FraudAlert> alertsAfterT3 = alertRepository.findAll();
+        assertThat(alertsAfterT3).hasSize(2);
+        FraudAlert criticalAlert = alertsAfterT3.stream()
+                .filter(a -> a.getStatus() == AlertStatus.HOLD_ACTIVE)
+                .findFirst()
+                .orElseThrow();
+        assertThat(criticalAlert.getDecision()).isEqualTo(DecisionType.STOP);
+        assertThat(criticalAlert.getPatternType()).isEqualTo("MULTI_HOP_FRAUD_CHAIN");
+        assertThat(criticalAlert.getFirstTransactionId()).isEqualTo("TXN-002");
+        assertThat(criticalAlert.getSecondTransactionId()).isEqualTo("TXN-003");
+        assertThat(criticalAlert.getIntermediateAccountId()).isEqualTo("3000000001");
+        assertThat(criticalAlert.getDestinationAccountId()).isEqualTo("4000000001");
+
+        // Step 4: Verify Fraud Query API returns the alerts with Bearer JWT
         mockMvc.perform(get("/api/fraud/alerts")
                         .header("Authorization", "Bearer " + policeToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].alertId").value(alert.getAlertId()))
-                .andExpect(jsonPath("$[0].status").value("HOLD_ACTIVE"))
-                .andExpect(jsonPath("$[0].decision").value("STOP"));
+                .andExpect(jsonPath("$.length()").value(2));
 
         // Step 5: Officer releases hold via Officer API with Bearer JWT
-        mockMvc.perform(post("/api/officer/holds/" + alert.getAlertId() + "/release")
+        mockMvc.perform(post("/api/officer/holds/" + criticalAlert.getAlertId() + "/release")
                         .header("Authorization", "Bearer " + policeToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"officerId\":\"OFFICER-77\",\"reason\":\"Investigation complete: cleared.\"}"))
@@ -185,7 +214,7 @@ class EndToEndFraudDetectionTest {
                 .andExpect(jsonPath("$.status").value("RELEASED"));
 
         // Step 6: Verify alert is now RESOLVED
-        FraudAlert resolvedAlert = alertRepository.findByAlertId(alert.getAlertId()).orElseThrow();
+        FraudAlert resolvedAlert = alertRepository.findByAlertId(criticalAlert.getAlertId()).orElseThrow();
         assertThat(resolvedAlert.getStatus()).isEqualTo(AlertStatus.RESOLVED);
         assertThat(resolvedAlert.getResolvedAt()).isNotNull();
     }
