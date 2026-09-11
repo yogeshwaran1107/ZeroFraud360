@@ -49,8 +49,8 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8 h-16">
         {/* Left: Brand / Title */}
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-red-600 via-rose-600 to-blue-600 shadow-lg shadow-rose-900/30">
-            <ShieldAlert className="h-6 w-6 text-white animate-pulse" />
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white p-1 shadow-md overflow-hidden shrink-0">
+            <img src="/ZeroFraud360.png" alt="ZeroFraud360 Logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-2">

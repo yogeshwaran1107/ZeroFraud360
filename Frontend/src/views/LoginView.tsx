@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Shield, Eye, EyeOff, AlertTriangle, Building2, Lock, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, AlertTriangle, Building2, Lock, KeyRound } from 'lucide-react';
 
 export const LoginView: React.FC = () => {
   const { login } = useAuth();
@@ -58,8 +58,8 @@ export const LoginView: React.FC = () => {
 
       {/* Top Header Logo - White Private Bank Theme */}
       <div className="flex flex-col items-center text-center mt-3 z-10">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white shadow-xl shadow-blue-900/20 mb-3 border border-blue-700/30">
-          <Shield className="h-7 w-7 fill-current" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-1.5 shadow-xl shadow-slate-200/80 mb-3 border border-slate-200/90 overflow-hidden">
+          <img src="/ZeroFraud360.png" alt="ZeroFraud360 Logo" className="h-full w-full object-contain" />
         </div>
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-black tracking-tight text-slate-900 m-0">

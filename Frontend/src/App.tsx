@@ -15,7 +15,6 @@ import { FraudPatternsView } from './views/FraudPatternsView';
 import { ProfileView } from './views/ProfileView';
 import { DeveloperView } from './views/DeveloperView';
 import { AccountForensicsView } from './views/AccountForensicsView';
-import { Shield } from 'lucide-react';
 
 const AppContent: React.FC = () => {
   const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
@@ -97,8 +96,8 @@ const AppContent: React.FC = () => {
   if (isAuthLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white text-slate-900">
-        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-700 text-white shadow-xl shadow-blue-700/20 mb-4 animate-pulse">
-          <Shield className="h-8 w-8 fill-current" />
+        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-1.5 shadow-xl shadow-slate-200 mb-4 border border-slate-200 animate-pulse overflow-hidden">
+          <img src="/ZeroFraud360.png" alt="ZeroFraud360 Logo" className="h-full w-full object-contain" />
         </div>
         <div className="text-base font-black tracking-tight text-slate-900">
           ZeroFraud<span className="text-blue-700">360</span>

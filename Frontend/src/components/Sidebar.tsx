@@ -1,11 +1,9 @@
-import React from 'react';
 import {
   LayoutDashboard,
   Bell,
   CreditCard,
   Lock,
   User,
-  Shield,
   ShieldCheck,
   Building2,
   MapPin,
@@ -48,8 +46,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* Top Brand / Private Bank Header */}
       <div>
         <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200/80 bg-slate-50/50">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900 text-white shadow-md shadow-blue-900/20">
-            <Shield className="h-5 w-5 fill-current" />
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white p-1 shadow-sm border border-slate-200/80 overflow-hidden shrink-0">
+            <img src="/ZeroFraud360.png" alt="ZeroFraud360 Logo" className="h-full w-full object-contain" />
           </div>
           <div>
             <div className="font-black text-lg tracking-tight text-slate-900 leading-none">
