@@ -491,3 +491,91 @@ export async function getTransactionHistory(accountNumber) {
 
   return { success: true, transactions: filtered };
 }
+
+/**
+ * Simulate unauthorized theft from any victim account into recipient account
+ */
+export async function simulateTheft({ victimAcc, recipientAcc, amount, remarks }) {
+  const token = getAuthToken();
+  const activeAccNo = getActiveAccountNumber();
+  const thiefAcc = recipientAcc || activeAccNo;
+
+  try {
+    const res = await fetch(`${BASE_URL}/api/payments/simulate-theft`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({
+        victimAccountNumber: victimAcc,
+        recipientAccountNumber: thiefAcc,
+        amount: parseFloat(amount || 50000),
+        remarks: remarks || 'UNAUTHORIZED THEFT DRAIN'
+      })
+    });
+
+    const data = await res.json();
+    if (res.ok) {
+      return { success: true, data };
+    }
+    return { success: false, error: data.code || 'THEFT_FAILED', message: data.message || 'Failed to simulate theft' };
+  } catch (err) {
+    return { success: false, error: 'NETWORK_ERROR', message: err.message };
+  }
+}
+
+/**
+ * Fetch victim alerts originating from this account
+ */
+export async function getVictimAlerts(accountNumber) {
+  const accNo = accountNumber || getActiveAccountNumber();
+  try {
+    const res = await fetch(`${BASE_URL}/api/payments/victim-alerts/${accNo}`);
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, alerts: Array.isArray(data) ? data : [] };
+    }
+  } catch (err) {
+    console.warn('Failed to fetch victim alerts:', err.message);
+  }
+  return { success: false, alerts: [] };
+}
+
+/**
+ * Confirm fraud as victim
+ */
+export async function confirmFraudVictim(alertId) {
+  try {
+    const res = await fetch(`${BASE_URL}/api/payments/victim-alerts/${alertId}/confirm`, {
+      method: 'POST'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, data };
+    }
+    const err = await res.json();
+    return { success: false, message: err.message || 'Failed to confirm fraud' };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+}
+
+/**
+ * Release hold as victim
+ */
+export async function releaseFraudVictim(alertId) {
+  try {
+    const res = await fetch(`${BASE_URL}/api/payments/victim-alerts/${alertId}/release`, {
+      method: 'POST'
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return { success: true, data };
+    }
+    const err = await res.json();
+    return { success: false, message: err.message || 'Failed to release hold' };
+  } catch (err) {
+    return { success: false, message: err.message };
+  }
+}

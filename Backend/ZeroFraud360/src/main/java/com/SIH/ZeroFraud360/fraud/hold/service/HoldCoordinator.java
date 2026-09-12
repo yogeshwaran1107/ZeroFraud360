@@ -68,9 +68,10 @@ public class HoldCoordinator {
 
             BankHoldResponseDto response = holdClient.placeHold(alert.getDestinationAccountId(), dto);
 
-            // Also explicitly freeze destination account and intermediate mule account in IndianBankSimulation
-            holdClient.freezeAccount(alert.getDestinationAccountId(), "Destination account in fraud alert " + alert.getAlertId());
-            if (alert.getIntermediateAccountId() != null && !alert.getIntermediateAccountId().isBlank()
+            // Freeze the designated held account so it cannot send or receive money
+            holdClient.freezeAccount(alert.getDestinationAccountId(), "Held account in fraud alert " + alert.getAlertId());
+            if (!"MULTI_HOP_FRAUD_CHAIN".equalsIgnoreCase(alert.getPatternType())
+                    && alert.getIntermediateAccountId() != null && !alert.getIntermediateAccountId().isBlank()
                     && !alert.getIntermediateAccountId().equals(alert.getDestinationAccountId())) {
                 holdClient.freezeAccount(alert.getIntermediateAccountId(), "Suspected mule in fraud alert " + alert.getAlertId());
             }

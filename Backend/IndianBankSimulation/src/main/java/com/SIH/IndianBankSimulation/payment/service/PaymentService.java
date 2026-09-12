@@ -41,6 +41,10 @@ public class PaymentService {
     private final OutboxEventRepository outboxEventRepository;
     private final PasswordEncoder passwordEncoder;
     private final ObjectMapper objectMapper;
+    private final org.springframework.web.client.RestTemplate restTemplate;
+
+    @org.springframework.beans.factory.annotation.Value("${bank.zerofraud360.base-url:http://localhost:8081}")
+    private String zeroFraudBaseUrl = "http://localhost:8081";
 
     public PaymentService(BankAccountRepository accountRepository,
                           AccountHoldRepository holdRepository,
@@ -54,6 +58,7 @@ public class PaymentService {
         this.outboxEventRepository = outboxEventRepository;
         this.passwordEncoder = passwordEncoder;
         this.objectMapper = objectMapper;
+        this.restTemplate = new org.springframework.web.client.RestTemplate();
     }
 
     @Transactional
@@ -64,12 +69,22 @@ public class PaymentService {
         BankAccount receiver = accountRepository.findByAccountNumber(request.receiverAccountNumber())
                 .orElseThrow(() -> new ResourceNotFoundException("Receiver account", request.receiverAccountNumber()));
 
+        // Outbound hold check: accounts with active or blocked holds cannot send money
         boolean isSenderBlockedOrFrozen = sender.getStatus() == AccountStatus.FROZEN
-                || holdRepository.existsByAccountIdAndStatusIn(sender.getAccountNumber(), java.util.List.of(HoldStatus.BLOCKED));
+                || holdRepository.existsByAccountIdAndStatusIn(sender.getAccountNumber(), java.util.List.of(HoldStatus.ACTIVE, HoldStatus.BLOCKED));
         if (isSenderBlockedOrFrozen) {
-            log.warn("Transfer BLOCKED for account {}: Account is marked as fraud/frozen", sender.getAccountNumber());
-            throw new BankingException(HttpStatus.FORBIDDEN, "ACCOUNT_BLOCKED_FRAUD",
-                    "You have been marked as a fraud and the officials are tracking you! All outbound transfers are suspended.");
+            log.warn("Transfer BLOCKED for account {}: Account is on protective hold/frozen", sender.getAccountNumber());
+            throw new BankingException(HttpStatus.FORBIDDEN, "ACCOUNT_ON_HOLD",
+                    "Your account is currently on protective hold pending fraud investigation. Outbound transfers are suspended.");
+        }
+
+        // Inbound hold check: accounts with active or blocked holds cannot receive money
+        boolean isReceiverBlockedOrFrozen = receiver.getStatus() == AccountStatus.FROZEN
+                || holdRepository.existsByAccountIdAndStatusIn(receiver.getAccountNumber(), java.util.List.of(HoldStatus.ACTIVE, HoldStatus.BLOCKED));
+        if (isReceiverBlockedOrFrozen) {
+            log.warn("Transfer REJECTED for recipient {}: Beneficiary account is on protective hold/frozen", receiver.getAccountNumber());
+            throw new BankingException(HttpStatus.FORBIDDEN, "RECIPIENT_ON_HOLD",
+                    "Cannot transfer funds: Beneficiary account is currently on protective hold pending investigation.");
         }
 
         if (sender.getStatus() != AccountStatus.ACTIVE) {
@@ -77,6 +92,28 @@ public class PaymentService {
         }
         if (receiver.getStatus() != AccountStatus.ACTIVE) {
             throw new BankingException(HttpStatus.BAD_REQUEST, "ACCOUNT_INACTIVE", "Receiver account is not active");
+        }
+
+        // Real-Time Pre-Transfer Screening via ZeroFraud360
+        try {
+            String preCheckUrl = zeroFraudBaseUrl.replaceAll("/+$", "") + "/internal/v1/fraud/pre-check";
+            java.util.Map<String, Object> checkBody = java.util.Map.of(
+                    "senderAccountId", sender.getAccountNumber(),
+                    "receiverAccountId", receiver.getAccountNumber(),
+                    "amount", request.amount(),
+                    "currency", request.currency() != null ? request.currency() : "INR"
+            );
+            java.util.Map<?, ?> res = restTemplate.postForObject(preCheckUrl, checkBody, java.util.Map.class);
+            if (res != null && Boolean.FALSE.equals(res.get("allowed"))) {
+                String reason = res.get("reason") != null ? res.get("reason").toString() : "Security Intercept: Transaction stopped by ZeroFraud360.";
+                log.warn("Transaction INTERCEPTED by ZeroFraud360: sender={}, receiver={}, reason={}",
+                        sender.getAccountNumber(), receiver.getAccountNumber(), reason);
+                throw new BankingException(HttpStatus.FORBIDDEN, "ACCOUNT_ON_HOLD", reason);
+            }
+        } catch (BankingException be) {
+            throw be;
+        } catch (Exception ex) {
+            log.warn("ZeroFraud360 pre-check unavailable or errored (proceeding): {}", ex.getMessage());
         }
 
         // Optional PIN validation if provided
@@ -158,6 +195,81 @@ public class PaymentService {
                 receiver.getAccountNumber(),
                 request.amount(),
                 transaction.getCurrency(),
+                PaymentStatus.SUCCESS.name(),
+                occurredAt
+        );
+    }
+
+    @Transactional
+    public PaymentTransferResponse executeTheft(String victimAccountNumber, String recipientAccountNumber, BigDecimal amount, String remarks) {
+        BankAccount victim = accountRepository.findByAccountNumber(victimAccountNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Victim account", victimAccountNumber));
+
+        BankAccount thief = accountRepository.findByAccountNumber(recipientAccountNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Recipient account", recipientAccountNumber));
+
+        if (victim.getAvailableBalance().compareTo(amount) < 0) {
+            throw new BankingException(HttpStatus.BAD_REQUEST, "INSUFFICIENT_FUNDS",
+                    "Victim account has insufficient balance to drain: ₹" + victim.getAvailableBalance());
+        }
+
+        victim.setAvailableBalance(victim.getAvailableBalance().subtract(amount));
+        thief.setAvailableBalance(thief.getAvailableBalance().add(amount));
+        accountRepository.save(victim);
+        accountRepository.save(thief);
+
+        String txnId = "THEFT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+        Instant occurredAt = Instant.now();
+        String correlationId = CorrelationContext.getCorrelationId();
+
+        PaymentTransaction transaction = new PaymentTransaction(
+                txnId,
+                victim.getAccountNumber(),
+                thief.getAccountNumber(),
+                victim.getBank().getBankCode(),
+                thief.getBank().getBankCode(),
+                amount,
+                "INR",
+                PaymentStatus.SUCCESS,
+                "UNAUTHORIZED_THEFT",
+                correlationId,
+                remarks != null ? remarks : "UNAUTHORIZED THEFT DRAIN",
+                occurredAt
+        );
+        paymentTransactionRepository.save(transaction);
+
+        String eventId = "EVT-" + UUID.randomUUID().toString().replace("-", "").substring(0, 10).toUpperCase();
+        PaymentSuccessEvent eventPayload = new PaymentSuccessEvent(
+                eventId,
+                "PAYMENT_SUCCESS",
+                txnId,
+                occurredAt,
+                new AccountParticipantDto("ACC-" + victim.getAccountNumber(), victim.getAccountNumber(), victim.getBank().getBankCode()),
+                new AccountParticipantDto("ACC-" + thief.getAccountNumber(), thief.getAccountNumber(), thief.getBank().getBankCode()),
+                amount,
+                "INR",
+                "UNAUTHORIZED_THEFT",
+                correlationId,
+                remarks != null ? remarks : "UNAUTHORIZED THEFT DRAIN"
+        );
+
+        try {
+            String payloadJson = objectMapper.writeValueAsString(eventPayload);
+            OutboxEvent outboxEvent = new OutboxEvent(eventId, "PAYMENT_SUCCESS", "PAYMENT", txnId, payloadJson);
+            outboxEventRepository.save(outboxEvent);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize outbox event for theft", e);
+        }
+
+        log.warn("🚨 THEFT SIMULATION EXECUTED: Victim {} drained by ₹{} into recipient {}",
+                victim.getAccountNumber(), amount, thief.getAccountNumber());
+
+        return new PaymentTransferResponse(
+                txnId,
+                victim.getAccountNumber(),
+                thief.getAccountNumber(),
+                amount,
+                "INR",
                 PaymentStatus.SUCCESS.name(),
                 occurredAt
         );

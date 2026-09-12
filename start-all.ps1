@@ -41,7 +41,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoRoot/Fro
 
 # 6. Launch ZeroFraud360 Dashboard Frontend (Port 5173, Host 0.0.0.0)
 Write-Host "`n[6/6] Starting ZeroFraud360 Officer Dashboard on Port 5173 (0.0.0.0) ..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoRoot/Frontend'; npm run dev -- --host 0.0.0.0"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd '$RepoRoot/Frontend/ZeroFraud360'; npm run dev -- --host 0.0.0.0"
 
 Write-Host "`n=================================================================" -ForegroundColor Green
 Write-Host " ALL 5 APPLICATIONS LAUNCHED - MOBILE & REMOTE READY!" -ForegroundColor Green

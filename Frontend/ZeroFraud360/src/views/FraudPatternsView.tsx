@@ -11,6 +11,7 @@ import {
   Lock,
   X,
   AlertTriangle,
+  Archive,
 } from 'lucide-react';
 
 interface FraudPatternsViewProps {
@@ -92,14 +93,28 @@ export const FraudPatternsView: React.FC<FraudPatternsViewProps> = ({ onPatterns
     }
   };
 
-  const handleDeletePattern = async (patternId: string) => {
-    if (!confirm('Archive this pattern from active enforcement?')) return;
+  const handleDeletePattern = async (patternId: string, permanent: boolean = false) => {
+    const promptMsg = permanent
+      ? 'Permanently delete this pattern from the database?'
+      : 'Archive this pattern from active enforcement?';
+    if (!confirm(promptMsg)) return;
     try {
-      await api.fraud.deletePattern(patternId);
+      await api.fraud.deletePattern(patternId, permanent);
       await fetchPatterns();
       if (onPatternsUpdated) onPatternsUpdated();
     } catch {
       // Ignore
+    }
+  };
+
+  const handlePurgeCustom = async () => {
+    if (!confirm('Delete all custom confirmed mule patterns and restore baseline policies?')) return;
+    try {
+      await api.fraud.purgeCustomPatterns();
+      await fetchPatterns();
+      if (onPatternsUpdated) onPatternsUpdated();
+    } catch (err: any) {
+      alert(err?.message || 'Failed to purge custom patterns');
     }
   };
 
@@ -178,16 +193,27 @@ export const FraudPatternsView: React.FC<FraudPatternsViewProps> = ({ onPatterns
           />
         </div>
 
-        <button
-          onClick={() => {
-            setError(null);
-            setIsAddModalOpen(true);
-          }}
-          className="flex items-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-700/20 transition-all cursor-pointer shrink-0"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Register New Pattern</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handlePurgeCustom}
+            className="flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 px-3.5 py-2 text-xs font-semibold text-rose-700 transition-all cursor-pointer shrink-0"
+            title="Purge all custom/mule registered patterns and restore baseline defaults"
+          >
+            <Trash2 className="h-4 w-4 text-rose-600" />
+            <span>Purge Custom Patterns</span>
+          </button>
+
+          <button
+            onClick={() => {
+              setError(null);
+              setIsAddModalOpen(true);
+            }}
+            className="flex items-center gap-2 rounded-xl bg-blue-700 hover:bg-blue-800 px-4 py-2 text-xs font-bold text-white shadow-md shadow-blue-700/20 transition-all cursor-pointer shrink-0"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Register New Pattern</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Table */}
@@ -288,15 +314,34 @@ export const FraudPatternsView: React.FC<FraudPatternsViewProps> = ({ onPatterns
                         )}
                       </td>
                       <td className="py-4 px-6 text-right">
-                        {isActive && (
-                          <button
-                            onClick={() => handleDeletePattern(p.patternId)}
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                            title="Archive Pattern"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        )}
+                        <div className="flex items-center justify-end gap-1.5">
+                          {isActive ? (
+                            <>
+                              <button
+                                onClick={() => handleDeletePattern(p.patternId, false)}
+                                className="p-1.5 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors cursor-pointer"
+                                title="Archive Pattern (Deactivate)"
+                              >
+                                <Archive className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePattern(p.patternId, true)}
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Permanently from Database"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => handleDeletePattern(p.patternId, true)}
+                              className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                              title="Delete Permanently from Database"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );

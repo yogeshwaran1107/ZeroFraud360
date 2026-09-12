@@ -20,4 +20,6 @@ public interface FraudAlertRepository extends JpaRepository<FraudAlert, Long> {
     List<FraudAlert> findAllByStatus(AlertStatus status);
 
     List<FraudAlert> findAllByOrderByCreatedAtDesc();
+
+    List<FraudAlert> findBySourceAccountIdOrderByCreatedAtDesc(String sourceAccountId);
 }

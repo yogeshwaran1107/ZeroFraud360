@@ -9,6 +9,7 @@ import type {
   ApiError,
   QuickAccount,
   AccountForensics,
+  DashboardMetrics,
 } from '../types';
 
 
@@ -154,13 +155,19 @@ export const api = {
       });
     },
 
-    deletePattern: async (patternId: string): Promise<{ patternId: string; status: string }> => {
+    deletePattern: async (patternId: string, permanent: boolean = false): Promise<{ patternId: string; status: string }> => {
       return apiRequest<{ patternId: string; status: string }>(
-        `/api/fraud/patterns/${encodeURIComponent(patternId)}`,
+        `/api/fraud/patterns/${encodeURIComponent(patternId)}${permanent ? '?permanent=true' : ''}`,
         {
           method: 'DELETE',
         }
       );
+    },
+
+    purgeCustomPatterns: async (): Promise<{ success: boolean; purgedCount: number }> => {
+      return apiRequest<{ success: boolean; purgedCount: number }>('/api/fraud/patterns/custom/purge', {
+        method: 'DELETE',
+      });
     },
 
     getQuickAccounts: async (): Promise<QuickAccount[]> => {
@@ -169,6 +176,10 @@ export const api = {
 
     getAccountForensics: async (accountId: string): Promise<AccountForensics> => {
       return apiRequest<AccountForensics>(`/api/fraud/accounts/${encodeURIComponent(accountId)}/forensics`);
+    },
+
+    getDashboardMetrics: async (): Promise<DashboardMetrics> => {
+      return apiRequest<DashboardMetrics>('/api/fraud/metrics/dashboard');
     },
   },
 

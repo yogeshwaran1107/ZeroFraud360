@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { api } from './api/client';
-import type { FraudAlert, ObservedTransaction, FraudPattern } from './types';
+import type { FraudAlert, ObservedTransaction, FraudPattern, DashboardMetrics } from './types';
 import { Sidebar, type NavTab } from './components/Sidebar';
 
 import { Header } from './components/Header';
@@ -31,6 +31,7 @@ const AppContent: React.FC = () => {
   const [alerts, setAlerts] = useState<FraudAlert[]>([]);
   const [transactions, setTransactions] = useState<ObservedTransaction[]>([]);
   const [patternsCount, setPatternsCount] = useState<number>(0);
+  const [dashboardMetrics, setDashboardMetrics] = useState<DashboardMetrics | null>(null);
   const [isDataLoading, setIsDataLoading] = useState<boolean>(true);
   const [isBackendConnected, setIsBackendConnected] = useState<boolean>(true);
 
@@ -38,14 +39,18 @@ const AppContent: React.FC = () => {
   const fetchRealData = useCallback(async (silent: boolean = false) => {
     if (!silent) setIsDataLoading(true);
     try {
-      const [alertsRes, txsRes, patternsRes] = await Promise.all([
+      const [alertsRes, txsRes, patternsRes, metricsRes] = await Promise.all([
         api.fraud.getAlerts(),
         api.fraud.getTransactions(),
         api.fraud.getPatterns().catch(() => [] as FraudPattern[]),
+        api.fraud.getDashboardMetrics().catch(() => null),
       ]);
       setAlerts(alertsRes || []);
       setTransactions(txsRes || []);
       setPatternsCount(patternsRes?.length || 0);
+      if (metricsRes) {
+        setDashboardMetrics(metricsRes);
+      }
       setIsBackendConnected(true);
 
       // If viewing details, update selectedAlert with latest status
@@ -198,6 +203,10 @@ const AppContent: React.FC = () => {
           title={headerMeta.title}
           subtitle={headerMeta.subtitle}
           alertsCount={unreadAlertsCount}
+          recentAlerts={alerts.filter((a) => a.status === 'HOLD_ACTIVE')}
+          onSelectAlert={(alert) => {
+            setSelectedAlertForDetails(alert);
+          }}
           onAlertsClick={() => {
             setActiveTab('alerts');
             setSelectedAlertForDetails(null);
@@ -206,7 +215,7 @@ const AppContent: React.FC = () => {
         />
 
         {/* Page Content View */}
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 px-8 pb-8 pt-4 overflow-y-auto">
           {selectedAlertForDetails ? (
             <TransactionDetailsView
               alert={selectedAlertForDetails}
@@ -217,10 +226,10 @@ const AppContent: React.FC = () => {
             <DashboardView
               alerts={alerts}
               transactions={transactions}
+              metrics={dashboardMetrics}
               isLoading={isDataLoading}
               onViewAllAlerts={() => setActiveTab('alerts')}
               onSelectAlert={(a) => setSelectedAlertForDetails(a)}
-              onSimulationTriggered={() => fetchRealData(true)}
             />
           ) : activeTab === 'alerts' ? (
             <FraudAlertsView
@@ -246,7 +255,7 @@ const AppContent: React.FC = () => {
               onHoldReleased={() => fetchRealData(true)}
             />
           ) : activeTab === 'developer' ? (
-            <DeveloperView />
+            <DeveloperView onSimulationTriggered={() => fetchRealData(true)} />
           ) : (
             <ProfileView />
           )}

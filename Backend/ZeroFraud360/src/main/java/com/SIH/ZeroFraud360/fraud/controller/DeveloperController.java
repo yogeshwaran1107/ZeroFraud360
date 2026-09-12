@@ -158,5 +158,13 @@ public class DeveloperController {
         alertRepository.deleteAll();
         transactionRepository.deleteAll();
         processedEventRepository.deleteAll();
+
+        // Wipe custom generated mule patterns, preserving default baseline policies
+        var customPatterns = patternRepository.findAll().stream()
+                .filter(p -> !p.getPatternId().startsWith("PAT-BASELINE-"))
+                .toList();
+        if (!customPatterns.isEmpty()) {
+            patternRepository.deleteAll(customPatterns);
+        }
     }
 }

@@ -13,8 +13,12 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import com.SIH.ZeroFraud360.fraud.dto.AccountForensicsDto;
+import com.SIH.ZeroFraud360.fraud.dto.DashboardMetricsDto;
 import com.SIH.ZeroFraud360.fraud.dto.QuickAccountDto;
 import com.SIH.ZeroFraud360.fraud.service.AccountForensicsService;
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,15 +30,18 @@ public class FraudQueryController {
     private final ObservedTransactionRepository transactionRepository;
     private final FraudPatternRepository patternRepository;
     private final AccountForensicsService forensicsService;
+    private final com.SIH.ZeroFraud360.fraud.hold.service.HoldCoordinator holdCoordinator;
 
     public FraudQueryController(FraudAlertRepository alertRepository,
                                 ObservedTransactionRepository transactionRepository,
                                 FraudPatternRepository patternRepository,
-                                AccountForensicsService forensicsService) {
+                                AccountForensicsService forensicsService,
+                                com.SIH.ZeroFraud360.fraud.hold.service.HoldCoordinator holdCoordinator) {
         this.alertRepository = alertRepository;
         this.transactionRepository = transactionRepository;
         this.patternRepository = patternRepository;
         this.forensicsService = forensicsService;
+        this.holdCoordinator = holdCoordinator;
     }
 
     @GetMapping("/accounts/quick-list")
@@ -45,6 +52,104 @@ public class FraudQueryController {
     @GetMapping("/accounts/{accountId}/forensics")
     public ResponseEntity<AccountForensicsDto> getAccountForensics(@PathVariable("accountId") String accountId) {
         return ResponseEntity.ok(forensicsService.getAccountForensics(accountId));
+    }
+
+    @GetMapping("/metrics/dashboard")
+    public ResponseEntity<DashboardMetricsDto> getDashboardMetrics() {
+        List<ObservedTransaction> txs = transactionRepository.findAll();
+        List<FraudAlert> alerts = alertRepository.findAll();
+
+        long totalTransactions = txs.size();
+        BigDecimal totalAmount = txs.stream()
+                .map(ObservedTransaction::getAmount)
+                .filter(java.util.Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        long flaggedAlerts = alerts.size();
+        long activeHolds = alerts.stream()
+                .filter(a -> a.getStatus() == com.SIH.ZeroFraud360.fraud.domain.AlertStatus.HOLD_ACTIVE)
+                .count();
+
+        java.util.Set<String> affectedAccounts = new java.util.HashSet<>();
+        alerts.forEach(a -> {
+            if (a.getSourceAccountId() != null) affectedAccounts.add(a.getSourceAccountId());
+            if (a.getIntermediateAccountId() != null) affectedAccounts.add(a.getIntermediateAccountId());
+            if (a.getDestinationAccountId() != null) affectedAccounts.add(a.getDestinationAccountId());
+        });
+
+        java.util.Set<String> anomalyTxIds = new java.util.HashSet<>();
+        alerts.forEach(a -> {
+            if (a.getSecondTransactionId() != null) anomalyTxIds.add(a.getSecondTransactionId());
+        });
+
+        long suspiciousTx = txs.stream()
+                .filter(t -> t.getTransactionId() != null && anomalyTxIds.contains(t.getTransactionId()))
+                .count();
+        if (suspiciousTx == 0 && !alerts.isEmpty() && totalTransactions > 0) {
+            suspiciousTx = Math.min(totalTransactions, alerts.size());
+        }
+        long normalTx = Math.max(0, totalTransactions - suspiciousTx);
+
+        double normalPct = totalTransactions > 0 ? Math.round(((double) normalTx / totalTransactions) * 100.0) : 0.0;
+        double suspiciousPct = totalTransactions > 0 ? (100.0 - normalPct) : 0.0;
+
+        String[] labels = {"00-04h", "04-08h", "08-12h", "12-16h", "16-20h", "20-24h"};
+        long[] normalCounts = new long[6];
+        long[] alertCounts = new long[6];
+        BigDecimal[] binAmounts = new BigDecimal[6];
+        for (int i = 0; i < 6; i++) {
+            binAmounts[i] = BigDecimal.ZERO;
+        }
+
+        ZoneId zone = ZoneId.of("Asia/Kolkata");
+        for (ObservedTransaction tx : txs) {
+            Instant inst = tx.getOccurredAt() != null ? tx.getOccurredAt() : tx.getCreatedAt();
+            if (inst != null) {
+                int hour = inst.atZone(zone).getHour();
+                int idx = Math.min(5, Math.max(0, hour / 4));
+                if (anomalyTxIds.contains(tx.getTransactionId())) {
+                    alertCounts[idx]++;
+                } else {
+                    normalCounts[idx]++;
+                }
+                if (tx.getAmount() != null) {
+                    binAmounts[idx] = binAmounts[idx].add(tx.getAmount());
+                }
+            }
+        }
+
+        // Also account for any alerts whose triggering transactions might be tracked outside txs list
+        java.util.Set<String> countedTxIds = new java.util.HashSet<>();
+        txs.forEach(t -> countedTxIds.add(t.getTransactionId()));
+        for (FraudAlert a : alerts) {
+            String txId = a.getSecondTransactionId() != null ? a.getSecondTransactionId() : a.getFirstTransactionId();
+            if (txId == null || !countedTxIds.contains(txId)) {
+                Instant inst = a.getCreatedAt();
+                if (inst != null) {
+                    int hour = inst.atZone(zone).getHour();
+                    int idx = Math.min(5, Math.max(0, hour / 4));
+                    alertCounts[idx]++;
+                }
+            }
+        }
+
+        List<DashboardMetricsDto.HourlyBinDto> timeBins = new java.util.ArrayList<>();
+        for (int i = 0; i < 6; i++) {
+            timeBins.add(new DashboardMetricsDto.HourlyBinDto(labels[i], normalCounts[i], alertCounts[i], binAmounts[i]));
+        }
+
+        return ResponseEntity.ok(new DashboardMetricsDto(
+                totalTransactions,
+                totalAmount,
+                flaggedAlerts,
+                activeHolds,
+                affectedAccounts.size(),
+                normalTx,
+                suspiciousTx,
+                normalPct,
+                suspiciousPct,
+                timeBins
+        ));
     }
 
     @GetMapping("/alerts")
@@ -112,11 +217,46 @@ public class FraudQueryController {
     }
 
     @DeleteMapping("/patterns/{patternId}")
-    public ResponseEntity<Map<String, String>> deletePattern(@PathVariable("patternId") String patternId) {
+    public ResponseEntity<Map<String, String>> deletePattern(
+            @PathVariable("patternId") String patternId,
+            @RequestParam(name = "permanent", defaultValue = "false") boolean permanent) {
         patternRepository.findByPatternId(patternId).ifPresent(p -> {
-            p.setStatus("ARCHIVED");
-            patternRepository.save(p);
+            if (permanent || "ARCHIVED".equalsIgnoreCase(p.getStatus())) {
+                patternRepository.delete(p);
+            } else {
+                p.setStatus("ARCHIVED");
+                patternRepository.save(p);
+            }
         });
-        return ResponseEntity.ok(Map.of("patternId", patternId, "status", "ARCHIVED"));
+        return ResponseEntity.ok(Map.of("patternId", patternId, "status", permanent ? "DELETED" : "ARCHIVED"));
+    }
+
+    @DeleteMapping("/patterns/custom/purge")
+    public ResponseEntity<Map<String, Object>> purgeCustomPatterns() {
+        List<FraudPattern> customPatterns = patternRepository.findAll().stream()
+                .filter(p -> !p.getPatternId().startsWith("PAT-BASELINE-"))
+                .toList();
+        patternRepository.deleteAll(customPatterns);
+        return ResponseEntity.ok(Map.of("success", true, "purgedCount", customPatterns.size()));
+    }
+
+    @GetMapping("/alerts/victim/{accountId}")
+    public ResponseEntity<List<FraudAlert>> getVictimAlerts(@PathVariable("accountId") String accountId) {
+        List<FraudAlert> alerts = alertRepository.findBySourceAccountIdOrderByCreatedAtDesc(accountId).stream()
+                .filter(a -> a.getStatus() == com.SIH.ZeroFraud360.fraud.domain.AlertStatus.HOLD_ACTIVE)
+                .toList();
+        return ResponseEntity.ok(alerts);
+    }
+
+    @PostMapping("/alerts/{alertId}/confirm-victim")
+    public ResponseEntity<Map<String, Object>> confirmFraudAsVictim(@PathVariable("alertId") String alertId) {
+        holdCoordinator.confirmFraud(alertId, "VICTIM_VERIFIED", "Victim confirmed unauthorized fraud transfer");
+        return ResponseEntity.ok(Map.of("alertId", alertId, "status", "CONFIRMED_FRAUD", "confirmedBy", "VICTIM"));
+    }
+
+    @PostMapping("/alerts/{alertId}/release-victim")
+    public ResponseEntity<Map<String, Object>> releaseHoldAsVictim(@PathVariable("alertId") String alertId) {
+        holdCoordinator.releaseHold(alertId, "VICTIM_AUTHORIZED", "Victim reported that this transaction was authorized");
+        return ResponseEntity.ok(Map.of("alertId", alertId, "status", "RELEASED", "releasedBy", "VICTIM"));
     }
 }

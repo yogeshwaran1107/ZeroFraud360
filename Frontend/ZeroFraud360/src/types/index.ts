@@ -212,3 +212,24 @@ export interface AccountForensics {
   velocityAlerts: GeoVelocityAlert[];
   auditLedger: ForensicTransactionItem[];
 }
+
+export interface HourlyBin {
+  label: string;
+  count: number;
+  alertCount: number;
+  totalAmount: number;
+}
+
+export interface DashboardMetrics {
+  totalTransactions: number;
+  totalAmount: number;
+  flaggedAlerts: number;
+  activeHolds: number;
+  affectedAccounts: number;
+  normalTransactions: number;
+  suspiciousTransactions: number;
+  normalPercentage: number;
+  suspiciousPercentage: number;
+  timeBins: HourlyBin[];
+}
+

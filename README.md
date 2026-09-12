@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./Frontend/ZeroFraud360.png" alt="ZeroFraud360 Logo" width="140" style="border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);" />
+<img src="./Frontend/ZeroFraud360/ZeroFraud360.png" alt="ZeroFraud360 Logo" width="140" style="border-radius: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.15);" />
 
 # ZeroFraud360
 ### Autonomous Real-Time Interbank Fraud Interception & Money-Mule Prevention Engine
